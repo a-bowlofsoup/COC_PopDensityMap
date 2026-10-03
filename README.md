@@ -1,10 +1,10 @@
 # Chandler, Drawn by Its People
 
-An animated relief map of population density in **Chandler, Arizona, from 1970 to 2026**. The map plays year by year as hills of colour rise where people settle: the farm town around downtown in the 1970s, the Intel-era subdivisions of the 1980s and 90s, and the build-out south of the Santan Freeway after 2000.
+An animated relief map of population density in **Chandler, Arizona, from 1970 to 2026**. The map plays year by year as hills of color rise where people settle: the farm town around downtown in the 1970s, the Intel-era subdivisions of the 1980s and 90s, and the build-out south of the Santan Freeway after 2000.
 
 Built for the City of Chandler's **10th anniversary GIS Day map contest**. It runs as a single offline web page, so it can be shown full screen on a projector without an internet connection.
 
-> **Map type:** this is a density relief (isopleth) map, not a cartogram. Areas keep their true size and shape; colour, shading and contour lines show how crowded each place is.
+> **Map type:** this is a density relief (isopleth) map, not a cartogram. Areas keep their true size and shape; color, shading and contour lines show how crowded each place is.
 
 ---
 
@@ -12,7 +12,7 @@ Built for the City of Chandler's **10th anniversary GIS Day map contest**. It ru
 
 | Element | Meaning |
 |---|---|
-| **Colour bands** | 25 steps on a school-atlas scale: blue where few people live, then greens, yellow, orange and red, with white for the most crowded places |
+| **Color bands** | 25 steps on a school-atlas scale: blue where few people live, then greens, yellow, orange and red, with white for the most crowded places |
 | **×1 on the legend** | Chandler's average density in 2020, about 4,000 people per square mile. Every year is compared with that one fixed value, so growth reads as the map rising out of the blue |
 | **Shading and contours** | Hillshade lit from the upper left, with shadows cast by the high ground. Contour lines on every band edge are white on the side facing the light and dark on the other |
 | **Loop 202, Loop 101, I-10** | Soft, see-through white bands with their ramps, cropped to the city limits |
@@ -31,7 +31,7 @@ Built for the City of Chandler's **10th anniversary GIS Day map contest**. It ru
 | **H** | Hide the control bar (or open the page with `#kiosk`) |
 | Speed menu | 0.5× to 4× |
 | Names | Turn place labels on or off |
-| Colours | Switch to a colour scale for red-green colour blindness |
+| Colors | Switch to a color scale for red-green color blindness |
 
 ---
 
@@ -66,7 +66,7 @@ Selects every Maricopa County Assessor parcel **inside Chandler's city limits or
 
 ### In the browser
 
-The page corrects the smoothing at the city edge, smooths the grid a little more, and draws each frame live. That covers the colour bands, the hillshade, cast shadows, contour lines, the overlays and labels. Years blend smoothly into one another as it plays.
+The page corrects the smoothing at the city edge, smooths the grid a little more, and draws each frame live. That covers the color bands, the hillshade, cast shadows, contour lines, the overlays and labels. Years blend smoothly into one another as it plays.
 
 ---
 
@@ -101,7 +101,7 @@ exec(open(r"C:\GIS\GISDay2026\pipeline\build_density_frames.py", encoding="utf-8
 | | `CHAPTERS`, `LABELS` | Story text and place labels |
 | | `CITY_PARCELS_ONLY` | `False` includes county-island residents (default) |
 | `index.html` | `WHITE_AT` | Where white starts (a number such as `3.0`, or `'auto'`) |
-| | `SMOOTH` | Extra smoothing of the colour bands |
+| | `SMOOTH` | Extra smoothing of the color bands |
 | | `BOUNDARY_ROUND` | Corner rounding of the city outline (0 = sharp) |
 | | `LABEL_TEXT` | Two-line labels, e.g. `'Chandler\|Fashion Center'` |
 | | `SHOW_OVERLAYS`, `OVERLAY_OPACITY` | Freeway and runway layer |
