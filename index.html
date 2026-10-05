@@ -326,13 +326,18 @@ const yearAt = tt => Y0 + (Y1 - Y0) * tt / (NF - 1);
 
 /* ======================= field for the current moment ======================= */
 const RAW = new Float32Array(N), F = new Float32Array(N);   // ratio, ladder position
+// edge correction done once per year at load, not every frame
+const CORR = D.frames.map(A => { const o = new Float32Array(N); for (let c = 0; c < N; c++) o[c] = corrected(A, c); return o; });
 function fieldAt(tt) {
-  const i = Math.min(NF - 1, Math.floor(tt)), j = Math.min(NF - 1, i + 1);
-  let u = tt - i; u = u * u * (3 - 2 * u);
-  const A = D.frames[i], B = D.frames[j];
+  /* Catmull-Rom through four neighbouring years: the change keeps an even pace across
+     year boundaries instead of easing to a stop at every year, which read as a stutter. */
+  const i = Math.min(NF - 1, Math.floor(tt)), u = tt - i;
+  const P0 = CORR[Math.max(0, i - 1)], P1 = CORR[i], P2 = CORR[Math.min(NF - 1, i + 1)], P3 = CORR[Math.min(NF - 1, i + 2)];
+  const u2 = u * u, u3 = u2 * u;
+  const w0 = -0.5 * u3 + u2 - 0.5 * u, w1 = 1.5 * u3 - 2.5 * u2 + 1, w2 = -1.5 * u3 + 2 * u2 + 0.5 * u, w3 = 0.5 * u3 - 0.5 * u2;
   for (let c = 0; c < N; c++) {
-    const a = corrected(A, c), v = a + (corrected(B, c) - a) * u;
-    RAW[c] = v;
+    const v = w0 * P0[c] + w1 * P1[c] + w2 * P2[c] + w3 * P3[c];
+    RAW[c] = v > 0 ? v : 0;
   }
   smoothField(RAW);
   for (let c = 0; c < N; c++) F[c] = ladder(RAW[c]);
@@ -391,19 +396,35 @@ function masse() {
    and cast shadows from a low 16 degree sun, the way the reference map does it. */
 let RU = 2, RW = 0, RH = 0, rc = null, rctx = null, rimg = null, RV = null, HT = null, SH = null, LIT = null;
 const SUN = 40, LOWSUN = 30, STRENGTH = 1.2, BRIGHTEN = 0.55, DARKEN = 0.60, LIGHTMAX = 0.55, CASTDARK = 0.32;
+const RASTER_MAX_PX = 380000;     // pixels in the relief image; lower = faster, higher = crisper
 function setupRaster() {
-  RU = Math.max(3, Math.min(6, Math.round(0.9 * mass)));
+  RU = Math.max(2, Math.min(6, Math.round(0.9 * mass), Math.floor(Math.sqrt(RASTER_MAX_PX / (W * H)))));
   RW = W * RU; RH = H * RU;
   rc = document.createElement('canvas'); rc.width = RW; rc.height = RH;
   rctx = rc.getContext('2d'); rimg = rctx.createImageData(RW, RH);
   RV = new Float32Array(RW * RH); HT = new Float32Array(RW * RH); SH = new Float32Array(RW * RH); LIT = new Float32Array(RW * RH);
+  // only the pixels inside the city (plus a small margin) are shaded each frame
+  const mc = document.createElement('canvas'); mc.width = RW; mc.height = RH;
+  const mg = mc.getContext('2d'), mp = outlinePath((x, y) => [x * RU, y * RU]);
+  mg.fillStyle = mg.strokeStyle = '#000'; mg.fill(mp, 'evenodd'); mg.lineWidth = 6; mg.stroke(mp);
+  const md = mg.getImageData(0, 0, RW, RH).data;
+  SPAN0 = new Int32Array(RH); SPAN1 = new Int32Array(RH);
+  for (let y = 0; y < RH; y++) {
+    let a = RW, b = -1;
+    for (let x = 0; x < RW; x++) if (md[(y * RW + x) * 4 + 3]) { if (a === RW) a = x; b = x; }
+    SPAN0[y] = Math.max(0, a - 2); SPAN1[y] = Math.min(RW, b + 3);
+  }
+  // sample positions for the upsample, worked out once
+  UX = new Int32Array(RW); UFX = new Float32Array(RW);
+  for (let x = 0; x < RW; x++) { const gx = Math.min(W - 1.001, Math.max(0, (x + 0.5) / RU - 0.5)); UX[x] = gx | 0; UFX[x] = gx - UX[x]; }
 }
+let SPAN0 = null, SPAN1 = null, UX = null, UFX = null;
 function renderRaster() {
   // bilinear upsample of the ladder value
   for (let y = 0; y < RH; y++) {
     const gy = Math.min(H - 1.001, Math.max(0, (y + 0.5) / RU - 0.5)), j = gy | 0, fy = gy - j;
-    for (let x = 0; x < RW; x++) {
-      const gx = Math.min(W - 1.001, Math.max(0, (x + 0.5) / RU - 0.5)), i = gx | 0, fx = gx - i, c = j * W + i;
+    for (let x = SPAN0[y], x1 = SPAN1[y]; x < x1; x++) {
+      const i = UX[x], fx = UFX[x], c = j * W + i;
       RV[y * RW + x] = (F[c] * (1 - fx) + F[c + 1] * fx) * (1 - fy) + (F[c + W] * (1 - fx) + F[c + W + 1] * fx) * fy;
     }
   }
@@ -422,9 +443,10 @@ function renderRaster() {
   const px = rimg.data;
   for (let y = 0; y < RH; y++) {
     const zc = y * RW, zo = (y > 0 ? y - 1 : y) * RW, zu = (y < RH - 1 ? y + 1 : y) * RW;
-    for (let x = 0; x < RW; x++) {
+    for (let x = SPAN0[y], x1 = SPAN1[y]; x < x1; x++) {
       const xm = x > 0 ? x - 1 : x, xp = x < RW - 1 ? x + 1 : x, i = zc + x;
-      const gx = (RV[zc + xp] - RV[zc + xm]) * 0.5 * OVER, gy = (RV[zu + x] - RV[zo + x]) * 0.5 * OVER;
+      const dx = (RV[zc + xp] - RV[zc + xm]) * 0.5, dy = (RV[zu + x] - RV[zo + x]) * 0.5;
+      const gx = dx * OVER, gy = dy * OVER;
       let I = (-gx * lx - gy * ly + lz) / Math.sqrt(gx * gx + gy * gy + 1) - lz;
       if (SH[i] > 0) I -= (SH[i] < 0.05 ? SH[i] / 0.05 : 1) * CASTDARK;
       let a = I * STRENGTH; if (a > LIGHTMAX) a = LIGHTMAX; else if (a < -LIGHTMAX) a = -LIGHTMAX;
@@ -432,7 +454,7 @@ function renderRaster() {
       let r = HR[k], g = HG[k], b = HB[k];
       {
         const pos = RV[i] * NB, frac = pos - Math.floor(pos);
-        const grad = Math.hypot(RV[zc + xp] - RV[zc + xm], RV[zu + x] - RV[zo + x]) * 0.5 * NB;
+        const grad = Math.sqrt(dx * dx + dy * dy) * NB;
         const near = frac < 0.5 ? frac : 1 - frac, dpx = grad > 1e-6 ? near / grad : 99;
         if (dpx < 0.9) {
           const n = frac < 0.5 ? Math.max(0, k - 1) : Math.min(NB - 1, k + 1), wgt = 0.5 * (1 - dpx / 0.9);
@@ -454,7 +476,8 @@ function renderRaster() {
 const LINE = 0.72, DARKLINE = 0.85;
 function contours(zc, toScreen, strich, alphaScale) {
   const lit = [], dark = [];
-  for (let k = 1; k < NB; k++) { lit.push([]); dark.push([]); }
+  for (let k = 1; k < NB; k++) { lit.push(new Path2D()); dark.push(new Path2D()); }
+  const pts = new Float64Array(8);
   for (let j = 0; j < H - 1; j++) for (let i = 0; i < W - 1; i++) {
     const c = j * W + i;
     const a = F[c], b = F[c + 1], cc = F[c + W + 1], d = F[c + W];
@@ -462,37 +485,28 @@ function contours(zc, toScreen, strich, alphaScale) {
     const k0 = Math.max(1, Math.floor(lo * NB) + 1), k1 = Math.min(NB - 1, Math.floor(hi * NB));
     if (k1 < k0) continue;
     // uphill direction in this cell; light comes from the upper left
-    const gx = (b - a + cc - d), gy = (d - a + cc - b), facing = gx + gy > 0;
+    const facing = (b - a + cc - d) + (d - a + cc - b) > 0;
+    const x = i + 0.5, y = j + 0.5;
     for (let k = k0; k <= k1; k++) {
-      const lv = k / NB;
-      const x = i + 0.5, y = j + 0.5, p = [];
-      const e = (v1, v2) => (lv - v1) / (v2 - v1);
-      if ((a >= lv) !== (b >= lv)) p.push(x + e(a, b), y);
-      if ((b >= lv) !== (cc >= lv)) p.push(x + 1, y + e(b, cc));
-      if ((d >= lv) !== (cc >= lv)) p.push(x + e(d, cc), y + 1);
-      if ((a >= lv) !== (d >= lv)) p.push(x, y + e(a, d));
-      if (p.length >= 4) (facing ? lit : dark)[k - 1].push(p);
+      const lv = k / NB; let n = 0;
+      if ((a >= lv) !== (b >= lv)) { pts[n++] = x + (lv - a) / (b - a); pts[n++] = y; }
+      if ((b >= lv) !== (cc >= lv)) { pts[n++] = x + 1; pts[n++] = y + (lv - b) / (cc - b); }
+      if ((d >= lv) !== (cc >= lv)) { pts[n++] = x + (lv - d) / (cc - d); pts[n++] = y + 1; }
+      if ((a >= lv) !== (d >= lv)) { pts[n++] = x; pts[n++] = y + (lv - a) / (d - a); }
+      if (n < 4) continue;
+      const P = (facing ? lit : dark)[k - 1];
+      for (let q = 0; q + 3 < n; q += 4) {
+        P.moveTo(pts[q] * mass + verX, pts[q + 1] * mass + verY);
+        P.lineTo(pts[q + 2] * mass + verX, pts[q + 3] * mass + verY);
+      }
     }
   }
   zc.lineCap = 'round'; zc.lineJoin = 'round';
   for (let k = 1; k < NB; k++) {
     const st = (k + 0.5) / NB;
-    for (const [list, col, al] of [[lit[k - 1], '#fff', 1], [dark[k - 1], '#000', DARKLINE]]) {
-      if (!list.length) continue;
-      zc.beginPath();
-      for (const p of list) {
-        let [X, Y] = toScreen(p[0], p[1], k); zc.moveTo(X, Y);
-        [X, Y] = toScreen(p[2], p[3], k); zc.lineTo(X, Y);
-        if (p.length === 8) {
-          [X, Y] = toScreen(p[4], p[5], k); zc.moveTo(X, Y);
-          [X, Y] = toScreen(p[6], p[7], k); zc.lineTo(X, Y);
-        }
-      }
-      zc.lineWidth = (0.40 + 0.95 * st) * strich;
-      zc.strokeStyle = col;
-      zc.globalAlpha = Math.min(1, LINE * st * al * alphaScale + 0.08);
-      zc.stroke();
-    }
+    zc.lineWidth = (0.40 + 0.95 * st) * strich;
+    zc.strokeStyle = '#fff'; zc.globalAlpha = Math.min(1, LINE * st * alphaScale + 0.08); zc.stroke(lit[k - 1]);
+    zc.strokeStyle = '#000'; zc.globalAlpha = Math.min(1, LINE * st * DARKLINE * alphaScale + 0.08); zc.stroke(dark[k - 1]);
   }
   zc.globalAlpha = 1;
 }
@@ -557,37 +571,55 @@ function outlinePath(map) {
 
 /* ======================= drawing ======================= */
 let dirty = true, NAMES = true;
+/* Everything that does not change from year to year (the shadow under the city, the
+   freeways and runways, the names and the scale bar) is drawn once into its own layer
+   and only copied each frame. Only the terrain and its contours are redrawn while playing. */
+let baseLayer = null, ovLayer = null, topLayer = null, SIL = null, staticKey = '';
+function layer() { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); return [c, g]; }
+function buildStatic() {
+  const map = (x, y) => [x * mass + verX, y * mass + verY];
+  SIL = outlinePath(map);
+  let g;
+  // shadow under the city
+  [baseLayer, g] = layer();
+  const blur = HALO;
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,0.9)'; g.shadowBlur = blur * DPR;
+  g.shadowOffsetX = blur * 0.15 * DPR; g.shadowOffsetY = blur * 0.25 * DPR;
+  g.fillStyle = '#000';
+  g.fill(SIL, 'evenodd'); g.fill(SIL, 'evenodd');
+  g.shadowBlur = blur * 0.3 * DPR; g.fill(SIL, 'evenodd');
+  g.restore();
+  const depth = Math.max(2.5, breite / 130);
+  g.save(); g.translate(0, depth * 1.9); g.filter = `blur(${(depth * 1.2).toFixed(1)}px)`;
+  g.fillStyle = 'rgba(0,0,0,.6)'; g.fill(SIL); g.restore();
+  g.save(); g.translate(0, depth); g.fillStyle = '#060605'; g.fill(SIL); g.restore();
+  // freeways and runways, clipped to the city
+  [ovLayer, g] = layer();
+  if (SHOW_OVERLAYS) { g.save(); g.clip(SIL, 'evenodd'); drawOverlays(g, map); g.restore(); }
+  // names and scale bar
+  [topLayer, g] = layer();
+  if (NAMES) drawNames(g);
+  drawScaleBar(g);
+  staticKey = [cv.width, cv.height, mass, verX, verY, NAMES].join(',');
+}
 function draw() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, cv.width, cv.height);
   if (!rc) return;
+  if (staticKey !== [cv.width, cv.height, mass, verX, verY, NAMES].join(',')) buildStatic();
   renderRaster();
-  const map = (x, y) => [x * mass + verX, y * mass + verY];
+  ctx.drawImage(baseLayer, 0, 0);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  const sil = outlinePath(map);
-  // soft dark halo around the whole city, slightly offset down-right (as in the classic page)
-  const blur = HALO;
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = blur * DPR;
-  ctx.shadowOffsetX = blur * 0.15 * DPR; ctx.shadowOffsetY = blur * 0.25 * DPR;
-  ctx.fillStyle = '#000';
-  ctx.fill(sil, 'evenodd'); ctx.fill(sil, 'evenodd');
-  ctx.shadowBlur = blur * 0.3 * DPR; ctx.fill(sil, 'evenodd');
-  ctx.restore();
-  // the map lies on the table like a sheet: a soft shadow, a dark edge, then the terrain
-  const depth = Math.max(2.5, breite / 130);
-  ctx.save(); ctx.translate(0, depth * 1.9); ctx.filter = `blur(${(depth * 1.2).toFixed(1)}px)`;
-  ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fill(sil); ctx.restore();
-  ctx.save(); ctx.translate(0, depth); ctx.fillStyle = '#060605'; ctx.fill(sil); ctx.restore();
-  ctx.save();
-  ctx.clip(sil, 'evenodd');
+  ctx.clip(SIL, 'evenodd');
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(rc, verX, verY, W * mass, H * mass);
-  contours(ctx, (x, y) => [x * mass + verX, y * mass + verY], Math.max(0.7, breite / 760), 1);
-  if (SHOW_OVERLAYS) drawOverlays(map);
+  contours(ctx, null, Math.max(0.7, breite / 760), 1);
   ctx.restore();
-  if (NAMES) drawNames();
-  drawScaleBar();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(ovLayer, 0, 0);
+  ctx.drawImage(topLayer, 0, 0);
 }
 /* ======================= overlays: freeways, ramps and runways =======================
    Soft, see-through layers on top of the terrain so they read as landmarks, not data.
@@ -597,14 +629,27 @@ function draw() {
    clipped to the city outline. */
 const SHOW_OVERLAYS = true;
 const OVERLAY_OPACITY = 0.42;
+// Runways and taxiways are drawn at their real width times this, so they stay visible
+// at city scale (a 30 m runway would be about one pixel). Aprons keep their true outline.
+const AIRFIELD_WIDEN = 1.8;
 const OV = D.overlays || { freeway: [], ramps: [], runways: [] };
 let ovCanvas = null, ovCtx = null;
-function drawOverlays(map) {
+function drawOverlays(ctx, map) {
   const line = (pts) => { const p = new Path2D(); pts.forEach(([x, y], k) => { const [X, Y] = map(x, y); k ? p.lineTo(X, Y) : p.moveTo(X, Y); }); return p; };
   const main = new Path2D(), ramps = new Path2D();
   for (const pts of (OV.freeway || [])) main.addPath(line(pts));
   for (const pts of (OV.ramps || [])) ramps.addPath(line(pts));
-  if ((OV.freeway || []).length + (OV.ramps || []).length > 0) {
+  // airfield in its real shape: aprons as areas, runways and taxiways as lines with width
+  const AF = OV.airfield || null;
+  const pxPerM = mass / (D.cellSizeM || 100);
+  const aprons = new Path2D(), taxi = [], runs = [];
+  if (AF) {
+    for (const ring of (AF.aprons || [])) { aprons.addPath(line(ring)); aprons.closePath(); }
+    for (const t of (AF.taxiways || [])) taxi.push([line(t.p), Math.max(1.1, t.w * pxPerM * AIRFIELD_WIDEN)]);
+    for (const r of (AF.runways || [])) runs.push([line(r.p), Math.max(2.0, r.w * pxPerM * AIRFIELD_WIDEN)]);
+  }
+  const any = (OV.freeway || []).length + (OV.ramps || []).length + (AF ? 1 : 0);
+  if (any > 0) {
     if (!ovCanvas || ovCanvas.width !== cv.width || ovCanvas.height !== cv.height) {
       ovCanvas = document.createElement('canvas'); ovCanvas.width = cv.width; ovCanvas.height = cv.height; ovCtx = ovCanvas.getContext('2d');
     }
@@ -616,21 +661,35 @@ function drawOverlays(map) {
     const wr = Math.max(1.4, w * 0.42);                        // ramps
     // dark casing under everything, then white on top, so junctions merge cleanly
     o.strokeStyle = 'rgba(0,0,0,0.65)';
+    o.lineWidth = 3; o.stroke(aprons);
+    for (const [p, lw] of taxi) { o.lineWidth = lw + 3; o.stroke(p); }
+    o.lineCap = 'butt';                                        // runway ends are square
+    for (const [p, lw] of runs) { o.lineWidth = lw + 3; o.stroke(p); }
+    o.lineCap = 'round';
     o.lineWidth = wr + 3; o.stroke(ramps);
     o.lineWidth = w + 3; o.stroke(main);
-    o.strokeStyle = '#fff';
+    o.strokeStyle = o.fillStyle = '#fff';
+    o.fill(aprons);
+    for (const [p, lw] of taxi) { o.lineWidth = lw; o.stroke(p); }
+    o.lineCap = 'butt';
+    for (const [p, lw] of runs) { o.lineWidth = lw; o.stroke(p); }
+    o.lineCap = 'round';
     o.lineWidth = wr; o.stroke(ramps);
     o.lineWidth = w; o.stroke(main);
-    // faint dashed centre line on the main lanes
+    // faint dashed centre lines on the main lanes and the runways
     o.strokeStyle = 'rgba(0,0,0,0.35)'; o.lineWidth = Math.max(0.8, w * 0.12);
-    o.setLineDash([w * 1.2, w * 1.2]); o.stroke(main); o.setLineDash([]);
+    o.setLineDash([w * 1.2, w * 1.2]); o.stroke(main);
+    o.lineCap = 'butt';
+    for (const [p, lw] of runs) { o.lineWidth = Math.max(0.6, lw * 0.12); o.setLineDash([lw * 1.4, lw * 1.0]); o.stroke(p); }
+    o.setLineDash([]); o.lineCap = 'round';
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = OVERLAY_OPACITY;
     ctx.drawImage(ovCanvas, 0, 0);
     ctx.restore();
   }
-  if (OV.runways && OV.runways.length) {
+  // FAA runway rectangles, only when the airfield layer is missing
+  if (!AF && OV.runways && OV.runways.length) {
     for (const ring of OV.runways) {
       const r = line(ring); r.closePath();
       ctx.fillStyle = 'rgba(255,255,255,0.38)'; ctx.fill(r);
@@ -647,7 +706,7 @@ const LABEL_TEXT = {
   'Southeast Chandler': 'Southeast|Chandler',
   'Chandler Airport': 'Chandler|Airport',
 };
-function drawNames() {
+function drawNames(ctx) {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const placed = [];
   for (const lb of [...D.labels].sort((a, b) => a.rank - b.rank)) {
@@ -672,7 +731,7 @@ function drawNames() {
   }
 }
 /* scale bar in the bottom-left corner of the map, clear of the city */
-function drawScaleBar() {
+function drawScaleBar(ctx) {
   const cellsPerMile = 1609.344 / (D.cellSizeM || 100);
   const miles = mass * cellsPerMile * 2 > MAPW * 0.25 ? 1 : 2;
   const len = mass * cellsPerMile * miles, x = BLEED + 22, y = BLEED + MAPH - 22;
@@ -740,7 +799,9 @@ function legend() {
   }
   $('legText').textContent = `Compared with ${PLACE}’s average in ${D.refYear}` +
     (D.refDensityPerSqMi ? ` (about ${nf.format(D.refDensityPerSqMi)} people per square mile)` : '');
-  $('quelle').textContent = D.source || '';
+  // OpenStreetMap's licence asks for credit wherever its data is shown
+  const quelle = ((OV.airfield && OV.airfield.src === 'osm') ? 'Airfields © OpenStreetMap contributors. ' : '') + (D.source || '');
+  $('quelle').textContent = quelle; $('quelle').title = quelle;
   if (D.demo && !$('demo')) {
     const tag = document.createElement('span'); tag.id = 'demo'; tag.textContent = 'Demo pattern';
     tag.title = 'The map pattern is simulated. Population totals are real Census figures.';
