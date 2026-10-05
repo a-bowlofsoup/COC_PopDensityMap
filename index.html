@@ -2,10 +2,10 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Chandler, drawn by its people</title>
-<meta name="description" content="Chandler, Arizona, from 1970 to today as a relief map: colour and shading show how densely each part of the city is settled.">
+<meta name="description" content="Chandler, Arizona, from 1970 to today as a relief map: color and shading show how densely each part of the city is settled.">
 <style>
 /* Layout: story column on the left, the relief map filling the right column (sized to the
-   city's shape), one control bar along the bottom. Colours and type follow the
+   city's shape), one control bar along the bottom. colors and type follow the
    school-atlas reference: black ground, white ink, one dark climate only. */
 :root{
   --plane:#1d1e1c; --surface:#0c0c0c; --ink:#fff; --ink2:#bfbeb6; --muted:#7f7d77;
@@ -149,7 +149,7 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
       <canvas id="spark" aria-hidden="true"></canvas>
     </div>
     <div>
-      <div class="legende"><div class="pole"><span>less crowded</span><span class="rechts"><span>more crowded</span><button id="farben" aria-pressed="false" title="Colours for red-green colour blindness">Colours</button></span></div><div class="rampe" id="rampe"></div><div class="stufen" id="legStufen"></div></div>
+      <div class="legende"><div class="pole"><span>less crowded</span><span class="rechts"><span>more crowded</span><button id="farben" aria-pressed="false" title="colors for red-green color blindness">colors</button></span></div><div class="rampe" id="rampe"></div><div class="stufen" id="legStufen"></div></div>
       <p class="klein" id="legText"></p>
       <p class="quelle" id="quelle"></p>
     </div>
@@ -281,7 +281,7 @@ for (const r of D.boundary) for (const [x, y] of r) {
 }
 const ASPECT = (BX1 - BX0) / (BY1 - BY0);
 
-/* ======================= the colour ladder =======================
+/* ======================= the color ladder =======================
    25 bands, a school-atlas convention: five of water where the fewest people
    live, then forest green, grass, yellow, ochre, orange, red, and snow at the top.
    The coast sits at x0.5 of the average, white starts at WHITE. */
@@ -392,7 +392,7 @@ function masse() {
 }
 
 /* ======================= the relief raster =======================
-   Upsampled field, banded colour, hillshade from the upper left at 40 degrees
+   Upsampled field, banded color, hillshade from the upper left at 40 degrees
    and cast shadows from a low 16 degree sun, the way the reference map does it. */
 let RU = 2, RW = 0, RH = 0, rc = null, rctx = null, rimg = null, RV = null, HT = null, SH = null, LIT = null;
 const SUN = 40, LOWSUN = 30, STRENGTH = 1.2, BRIGHTEN = 0.55, DARKEN = 0.60, LIGHTMAX = 0.55, CASTDARK = 0.32;
