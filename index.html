@@ -187,7 +187,7 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
 // 'auto' sets it so that WHITE_SHARE of the city is white in the final year.
 const WHITE_AT = 3.0;         // a number (no quotes) fixes it; 'auto' sets it from the data
 const WHITE_SHARE = 0.05;
-const SEC_PER_YEAR = 0.8;        // playback speed
+const SEC_PER_YEAR = 1.0;        // playback speed
 const END_HOLD = 4.5;              // seconds the last year stays before the loop restarts
 
 /* ======================= data ======================= */
@@ -214,7 +214,7 @@ const YEARS = D.years, NF = YEARS.length, Y0 = YEARS[0], Y1 = YEARS[NF - 1];
 const CENSUS = new Set(D.censusYears || []);
 /* Extra smoothing: a small Gaussian over the density grid rounds off the corners
    of every band. SMOOTH is in grid cells (100 m); 0 turns it off. */
-const SMOOTH = 1.6;
+const SMOOTH = 2.0;
 const SM_K = (() => {
   if (!(SMOOTH > 0)) return null;
   const r = Math.ceil(SMOOTH * 2.5), k = []; let s = 0;
@@ -396,7 +396,7 @@ function masse() {
    and cast shadows from a low 16 degree sun, the way the reference map does it. */
 let RU = 2, RW = 0, RH = 0, rc = null, rctx = null, rimg = null, RV = null, HT = null, SH = null, LIT = null;
 const SUN = 40, LOWSUN = 30, STRENGTH = 1.2, BRIGHTEN = 0.55, DARKEN = 0.60, LIGHTMAX = 0.55, CASTDARK = 0.32;
-const RASTER_MAX_PX = 380000;     // pixels in the relief image; lower = faster, higher = crisper
+const RASTER_MAX_PX = 600000;     // pixels in the relief image; lower = faster, higher = crisper
 function setupRaster() {
   RU = Math.max(2, Math.min(6, Math.round(0.9 * mass), Math.floor(Math.sqrt(RASTER_MAX_PX / (W * H)))));
   RW = W * RU; RH = H * RU;
