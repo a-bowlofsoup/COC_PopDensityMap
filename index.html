@@ -2,16 +2,16 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Chandler, drawn by its people</title>
-<meta name="description" content="Chandler, Arizona, from 1970 to today as a relief map: color and shading show how densely each part of the city is settled.">
+<meta name="description" content="Chandler, Arizona, from 1970 to today as a relief map: colour and shading show how densely each part of the city is settled.">
 <style>
 /* Layout: story column on the left, the relief map filling the right column (sized to the
-   city's shape), one control bar along the bottom. colors and type follow the
+   city's shape), one control bar along the bottom. Colours and type follow the
    school-atlas reference: black ground, white ink, one dark climate only. */
 :root{
   --plane:#1d1e1c; --surface:#0c0c0c; --ink:#fff; --ink2:#bfbeb6; --muted:#7f7d77;
   --line:#232321; --axis:#33332f; --ring:rgba(255,255,255,.09); --accent:#9aa07f;
   --u:min(1vh,.62vw);      /* panel scale unit: grows with the screen */
-  --map-w:62vw;            /* set by the script to the map's natural width */
+  --panel-w:clamp(330px,30vw,620px);   /* story column; the map takes the rest and sits centred in it */
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -19,7 +19,7 @@ html,body{margin:0;height:100%}
 body{background:var(--plane);color:var(--ink);
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.5;overflow:hidden}
 #app{height:100%;display:grid;
-  grid-template-columns:minmax(320px,1fr) minmax(0,var(--map-w));
+  grid-template-columns:var(--panel-w) minmax(0,1fr);
   grid-template-rows:minmax(0,1fr) auto;
   grid-template-areas:"panel map" "controls controls";
   padding-inline:clamp(16px,2.5vw,44px);padding-block:clamp(10px,1.6vh,28px) 0;
@@ -27,16 +27,16 @@ body{background:var(--plane);color:var(--ink);
 
 /* ---------- story panel */
 #panel{grid-area:panel;min-width:0;min-height:0;display:flex;flex-direction:column;
-  gap:calc(1.5*var(--u));justify-content:space-between;overflow:hidden}
+  gap:calc(1.6*var(--u));justify-content:flex-start;overflow:hidden;padding-bottom:calc(.8*var(--u));
+  padding-left:28px;margin-left:-28px}     /* room for the decade halo to fade out without being clipped */
+#panel > :last-child{margin-top:auto}      /* legend sits at the foot; the chart above takes the slack */
 .eyebrow{font:600 max(12px,calc(1.6*var(--u)))/1.2 system-ui,sans-serif;letter-spacing:.14em;
   text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-#demo{font-weight:500;letter-spacing:.02em;text-transform:none;color:#e0ad5f;
-  border:1px solid rgba(224,173,95,.5);border-radius:4px;padding:2px 7px}
 .headline{display:flex;align-items:baseline;gap:.35em;flex-wrap:wrap}
-#year{font-weight:650;font-size:max(72px,calc(16*var(--u)));line-height:.85;letter-spacing:-.03em;
+#year{font-weight:650;font-size:clamp(56px,calc(14.5*var(--u)),200px);line-height:.85;letter-spacing:-.03em;
   font-variant-numeric:tabular-nums}
 .popblock{display:flex;flex-direction:column;gap:4px}
-#pop{font-weight:650;font-size:max(22px,calc(4.4*var(--u)));line-height:1;letter-spacing:-.01em;
+#pop{font-weight:650;font-size:clamp(20px,calc(4.2*var(--u)),60px);line-height:1;letter-spacing:-.01em;
   font-variant-numeric:tabular-nums}
 .popline{font-size:max(13px,calc(1.8*var(--u)));line-height:1.2;color:var(--ink2);display:flex;gap:8px;align-items:center}
 #popKind{font-size:max(11px,calc(1.45*var(--u)));line-height:1;padding:.3em .55em;border-radius:5px;
@@ -44,57 +44,128 @@ body{background:var(--plane);color:var(--ink);
 #popKind.census{color:var(--ink);border-color:var(--muted)}
 
 #story{display:flex;flex-direction:column;gap:calc(.7*var(--u));max-width:36em;transition:opacity .4s}
-#chRange{font-size:max(13px,calc(1.8*var(--u)));line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
-#chTitle{margin:0;font-weight:650;font-size:max(20px,calc(3.4*var(--u)));line-height:1.15;text-wrap:balance}
-#chText{margin:0;color:var(--ink2);font-size:max(14px,calc(2.1*var(--u)));line-height:1.45}
+#chRange{align-self:flex-start;font-size:clamp(12px,calc(1.75*var(--u)),22px);line-height:1;color:#d4dab2;font-variant-numeric:tabular-nums;
+  animation:glyphGlow 3.0s ease-in-out infinite}
+/* the current decade glows softly around each letter: a tight inner glow plus a wide faint one */
+:root{--glow-in:rgba(220,228,176,.62);--glow-out:rgba(180,190,135,.30)}
+@keyframes glyphGlow{
+  0%,100%{text-shadow:0 0 4px var(--glow-in),0 0 12px var(--glow-out)}
+  50%{text-shadow:0 0 6px var(--glow-in),0 0 20px var(--glow-out)}}
+#chTitle{margin:0;font-weight:650;font-size:clamp(18px,calc(3.2*var(--u)),44px);line-height:1.15;text-wrap:balance}
+#chText{margin:0;color:var(--ink2);font-size:clamp(13px,calc(1.95*var(--u)),26px);line-height:1.45}
 
-#chList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+#chList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;position:relative}
+#chList li{position:relative;z-index:1}
+/* marker that glides down the list as the years pass from one decade into the next */
+#chList .range{transition:color .8s ease,text-shadow .8s ease}
 #chList button{all:unset;cursor:pointer;display:grid;grid-template-columns:6.5em 1fr;gap:10px;
-  padding:calc(.2*var(--u)) 0;font-weight:600;font-size:max(12.5px,calc(1.75*var(--u)));line-height:1.3;
+  padding:calc(.25*var(--u)) 0;font-weight:600;font-size:clamp(12px,calc(1.7*var(--u)),22px);line-height:1.3;
   color:var(--muted);border-radius:2px}
 #chList .range{font-weight:400;font-variant-numeric:tabular-nums}
 #chList li.past button{color:var(--ink2)}
 #chList li.active button{color:var(--ink)}
-#chList li.active .range{color:var(--accent)}
+#chList li.active .range{color:#d4dab2;animation:glyphGlow 4.5s ease-in-out infinite}
 #chList button:hover{color:var(--ink)}
 #chList button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .cap{font-weight:600;font-size:max(11px,calc(1.5*var(--u)));line-height:1.2;letter-spacing:.12em;
   text-transform:uppercase;color:var(--muted)}
-.sparkwrap{display:flex;flex-direction:column;gap:4px}
-#spark{width:100%;height:max(64px,calc(11*var(--u)));display:block}
+.sparkwrap{display:flex;flex-direction:column;gap:4px;flex:1 1 auto;min-height:64px;max-height:calc(20*var(--u))}
+#spark{width:100%;flex:1 1 0;min-height:0;height:0;display:block}
 
 /* ---------- legend (reference style: words at the ends, numbers on the ladder) */
-.legende{font-size:max(12px,calc(1.7*var(--u)));color:var(--ink2);font-variant-numeric:tabular-nums}
-.pole{display:flex;justify-content:space-between;align-items:center;color:var(--muted);margin-bottom:4px;line-height:1.2}
-.pole .rechts{display:flex;align-items:center;gap:8px}
-.rampe{height:max(10px,calc(1.8*var(--u)));border-radius:5px;border:1px solid var(--ring)}
-.stufen{position:relative;height:1.3em;margin-top:4px}
-.stufen span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
-.stufen span::before{content:'';position:absolute;left:50%;top:-4px;width:1px;height:4px;background:var(--axis)}
-.stufen .a{transform:none}
-.stufen .a::before{left:0}
-.stufen .eins{color:var(--ink)}
-.stufen .eins::before{top:-7px;height:7px;background:var(--ink)}
-.klein{margin:4px 0 0;font-size:max(12px,calc(1.7*var(--u)));line-height:1.35;color:var(--ink2)}
-.quelle{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:2px 0 0;font-size:max(10.5px,calc(1.3*var(--u)));line-height:1.35;color:var(--muted)}
-#farben{padding:2px 7px;font-size:max(11px,calc(1.4*var(--u)));line-height:1.2;border-radius:6px;color:var(--muted);border-style:dashed}
-#farben[aria-pressed=true]{color:var(--ink);border-style:solid}
+.legendBox{font-size:max(12px,calc(1.7*var(--u)));color:var(--ink2);font-variant-numeric:tabular-nums}
+.legendEnds{display:flex;justify-content:space-between;align-items:center;color:var(--muted);margin-bottom:4px;line-height:1.2}
+.legendEnds .endRight{display:flex;align-items:center;gap:8px}
+.colorRamp{height:max(10px,calc(1.8*var(--u)));border-radius:5px;border:1px solid var(--ring)}
+.legendTicks{position:relative;height:1.3em;margin-top:4px}
+.legendTicks span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.legendTicks span::before{content:'';position:absolute;left:50%;top:-4px;width:1px;height:4px;background:var(--axis)}
+.legendTicks .a{transform:none}
+.legendTicks .a::before{left:0}
+.legendTicks .oneTick{color:var(--ink)}
+.legendTicks .oneTick::before{top:-7px;height:7px;background:var(--ink)}
+.legendNote{margin:4px 0 0;font-size:max(12px,calc(1.7*var(--u)));line-height:1.35;color:var(--ink2)}
+.sourceNote{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:2px 0 0;font-size:max(10.5px,calc(1.3*var(--u)));line-height:1.35;color:var(--muted)}
+#colorsBtn{padding:2px 7px;font-size:max(11px,calc(1.4*var(--u)));line-height:1.2;border-radius:6px;color:var(--muted);border-style:dashed}
+#colorsBtn[aria-pressed=true]{color:var(--ink);border-style:solid}
 
-/* ---------- map */
-#mapwrap{grid-area:map;position:relative;min-width:0;min-height:0}
-#karte,#umriss{position:absolute;pointer-events:none}   /* sized by the script: larger than the column so the shadow can fade out */
-#umriss{z-index:2}
-#mapwrap{z-index:0}
-#panel,#controls{position:relative;z-index:1}
-.tip{position:absolute;z-index:4;pointer-events:none;background:#141412;border:1px solid var(--axis);
-  border-radius:9px;padding:7px 9px;font-size:12.5px;box-shadow:0 6px 25px rgba(0,0,0,.5);
-  max-width:280px;opacity:0;transition:opacity .15s}
-.tip b{display:block;font-size:13px;margin-bottom:2px}
-.tip dl{margin:0;display:grid;grid-template-columns:auto auto;gap:1px 10px}
-.tip dt{color:var(--ink2)}
-.tip dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
-.tip .sub{display:block;margin-top:5px;padding-top:4px;border-top:1px solid var(--axis);color:var(--muted);font-size:11.5px}
+/* ---------- Map Container ---------- */
+#mapwrap {
+  grid-area: map;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  z-index: 0;
+}
+
+#mapCanvas,
+#hoverOutline {
+  position: absolute;
+  inset: 0;                 /* Modern shorthand for top/left/right/bottom */
+  pointer-events: none;     /* Sized by script: larger than column for shadow fade */
+}
+
+#hoverOutline {
+  z-index: 2;
+}
+
+#panel,
+#controls {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Interactive Tooltips ---------- */
+.tip {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  max-width: 280px;
+  padding: 7px 9px;
+  
+  background: #141412;
+  border: 1px solid var(--axis);
+  border-radius: 9px;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.5);
+  
+  font-size: 12.5px;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out, left 0.12s, top 0.12s;   /* slides beside each subdivision */
+  will-change: opacity;     /* Optimizes rendering performance during fade */
+}
+
+.tip b {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.tip dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 1px 10px;
+}
+
+.tip dt {
+  color: var(--ink2);
+}
+
+.tip dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums; /* Prevents layout jitter with shifting numbers */
+}
+
+.tip .sub {
+  display: block;
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid var(--axis);
+  color: var(--muted);
+  font-size: 11.5px;
+}
 
 /* ---------- controls */
 #controls{grid-area:controls;display:flex;align-items:center;gap:14px;
@@ -110,7 +181,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #ticks{position:absolute;left:7px;right:7px;bottom:0;height:14px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 #ticks span{position:absolute;transform:translateX(-50%)}
 select{height:36px;border-radius:8px;background:var(--surface);color:var(--ink);border:1px solid var(--axis);font:500 13px system-ui,sans-serif;padding:0 8px}
-#namen[aria-pressed=false]{color:var(--muted);border-style:dashed}
+#namesBtn[aria-pressed=false]{color:var(--muted);border-style:dashed}
 .keys{font-size:11px;color:var(--muted);white-space:nowrap}
 body.idle #controls{opacity:0}
 body.idle{cursor:none}
@@ -125,7 +196,7 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
   #chList,.keys{display:none}
 }
 @media (max-width:520px){#controls{flex-wrap:wrap}.track{order:-1;flex-basis:100%}}
-@media (prefers-reduced-motion:reduce){#story,#controls{transition:none}}
+@media (prefers-reduced-motion:reduce){#chRange,#chList li.active .range{animation:none;text-shadow:0 0 4px var(--glow-in),0 0 12px var(--glow-out)}#story,#controls{transition:none}}
 </style>
 </head><body>
 <div id="app">
@@ -149,15 +220,15 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
       <canvas id="spark" aria-hidden="true"></canvas>
     </div>
     <div>
-      <div class="legende"><div class="pole"><span>less crowded</span><span class="rechts"><span>more crowded</span><button id="farben" aria-pressed="false" title="colors for red-green color blindness">colors</button></span></div><div class="rampe" id="rampe"></div><div class="stufen" id="legStufen"></div></div>
-      <p class="klein" id="legText"></p>
-      <p class="quelle" id="quelle"></p>
+      <div class="legendBox"><div class="legendEnds"><span>less crowded</span><span class="endRight"><span>more crowded</span><button id="colorsBtn" aria-pressed="false" title="Colours for red-green colour blindness">Colours</button></span></div><div class="colorRamp" id="colorRamp"></div><div class="legendTicks" id="legTicks"></div></div>
+      <p class="legendNote" id="legText"></p>
+      <p class="sourceNote" id="sourceNote"></p>
     </div>
   </section>
 
   <div id="mapwrap">
-    <canvas id="karte" role="img" aria-label="Relief map of Chandler's population density for the year shown"></canvas>
-    <canvas id="umriss" aria-hidden="true"></canvas>
+    <canvas id="mapCanvas" role="img" aria-label="Relief map of Chandler's population density for the year shown"></canvas>
+    <canvas id="hoverOutline" aria-hidden="true"></canvas>
     <div class="tip" id="tip"></div>
   </div>
 
@@ -170,15 +241,14 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
     <select id="speed" aria-label="Playback speed">
       <option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
     </select>
-    <button id="namen" class="btn" type="button" aria-pressed="true">Names</button>
+    <button id="namesBtn" class="btn" type="button" aria-pressed="true">Names</button>
     <button id="fullscreen" class="btn" type="button">Full screen</button>
     <span class="keys">Space play · ← → year · 1–5 chapter · H hide</span>
   </div>
 </div>
 
-<!-- Real data from pipeline/build_density_frames.py. If it is missing, demo.js draws a simulated pattern. -->
+<!-- Data from pipeline/build_density_frames.py -->
 <script src="data/density-data.js"></script>
-<script src="demo.js"></script>
 <script>
 (function () {
 'use strict';
@@ -187,13 +257,20 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
 // 'auto' sets it so that WHITE_SHARE of the city is white in the final year.
 const WHITE_AT = 3.0;         // a number (no quotes) fixes it; 'auto' sets it from the data
 const WHITE_SHARE = 0.05;
-const SEC_PER_YEAR = 0.9;        // playback speed
+const SEC_PER_YEAR = 0.8;        // playback speed
 const END_HOLD = 4.5;              // seconds the last year stays before the loop restarts
+const LOOP_FADE = 2.5;             // seconds the last year takes to melt back into 1970 when the loop restarts
 
 /* ======================= data ======================= */
 function loadData() {
   const src = window.DENSITY_DATA;
-  if (!src) return window.makeDemoData();
+  if (!src) {
+    // no data file: say so plainly instead of drawing anything made up
+    document.body.innerHTML = '<p style="margin:15vh auto;max-width:34em;padding:0 24px;font:16px/1.5 system-ui,sans-serif;color:#bfbeb6">' +
+      '<b style="color:#fff">Map data not found.</b><br>This page needs <code>data/density-data.js</code> next to it. ' +
+      'Create it with <code>pipeline/build_density_frames.py</code> in ArcGIS Pro, then reload.</p>';
+    throw new Error('data/density-data.js is missing');
+  }
   const d = Object.assign({}, src);
   if (typeof d.frames === 'string') {
     const bin = atob(d.frames), n = d.width * d.height, bytes = new Uint8Array(bin.length);
@@ -281,7 +358,7 @@ for (const r of D.boundary) for (const [x, y] of r) {
 }
 const ASPECT = (BX1 - BX0) / (BY1 - BY0);
 
-/* ======================= the color ladder =======================
+/* ======================= the colour ladder =======================
    25 bands, a school-atlas convention: five of water where the fewest people
    live, then forest green, grass, yellow, ochre, orange, red, and snow at the top.
    The coast sits at x0.5 of the average, white starts at WHITE. */
@@ -328,6 +405,13 @@ const yearAt = tt => Y0 + (Y1 - Y0) * tt / (NF - 1);
 const RAW = new Float32Array(N), F = new Float32Array(N);   // ratio, ladder position
 // edge correction done once per year at load, not every frame
 const CORR = D.frames.map(A => { const o = new Float32Array(N); for (let c = 0; c < N; c++) o[c] = corrected(A, c); return o; });
+function fieldBlend(w) {
+  // w = 0: the last year, w = 1: the first year; the terrain itself morphs, so hills sink smoothly
+  const A = CORR[NF - 1], B = CORR[0];
+  for (let c = 0; c < N; c++) RAW[c] = A[c] + (B[c] - A[c]) * w;
+  smoothField(RAW);
+  for (let c = 0; c < N; c++) F[c] = ladder(RAW[c]);
+}
 function fieldAt(tt) {
   /* Catmull-Rom through four neighbouring years: the change keeps an even pace across
      year boundaries instead of easing to a stop at every year, which read as a stutter. */
@@ -358,45 +442,53 @@ function smoothField(A) {
 }
 
 /* ======================= canvas and fit ======================= */
-const cv = document.getElementById('karte'), ctx = cv.getContext('2d');
-let breite = 0, hoehe = 0, DPR = 1, mass = 1, verX = 0, verY = 0;
-function fitColumns() {
-  // the map column is as wide as the city needs at full height; the story panel gets the rest
-  const mapH = cv.parentElement.getBoundingClientRect().height || innerHeight * 0.85;
-  const w = Math.min(mapH * ASPECT * 1.03 + mapH * 0.02, innerWidth * 0.68);
-  document.documentElement.style.setProperty('--map-w', Math.round(w) + 'px');
-}
+const cv = document.getElementById('mapCanvas'), ctx = cv.getContext('2d');
+let canvasW = 0, canvasH = 0, DPR = 1, mass = 1, offX = 0, offY = 0;
+function fitColumns() { /* the map column now fills the space beside the panel (see --panel-w) */ }
 let BLEED = 0, MAPW = 0, MAPH = 0, HALO = 24;
-const uv = document.getElementById('umriss'), uctx = uv.getContext('2d');
-function masse() {
-  const feld = cv.parentElement;
-  MAPW = feld.clientWidth; MAPH = Math.max(120, feld.clientHeight);
+const uv = document.getElementById('hoverOutline'), uctx = uv.getContext('2d');
+const MAP_SHIFT_X = -280;   // pixels; negative moves the map left, positive moves it right
+function fitMap() {
+  const host = cv.parentElement;
+  MAPW = host.clientWidth; MAPH = Math.max(120, host.clientHeight);
   // the canvas reaches past the map column on every side, so the soft shadow can fade out fully
   HALO = Math.max(20, MAPH * 0.05);
   BLEED = Math.round(HALO * 1.6);
-  breite = MAPW + 2 * BLEED; hoehe = MAPH + 2 * BLEED;
+  canvasW = MAPW + 2 * BLEED; canvasH = MAPH + 2 * BLEED;
   DPR = Math.min(2, devicePixelRatio || 1);
   for (const c of [cv, uv]) {
+    c.style.position = 'absolute';     // set here as well, so the map never falls into the page flow
     c.style.left = c.style.top = -BLEED + 'px';
-    c.style.width = breite + 'px'; c.style.height = hoehe + 'px';
-    c.width = Math.round(breite * DPR); c.height = Math.round(hoehe * DPR);
+    c.style.width = canvasW + 'px'; c.style.height = canvasH + 'px';
+    c.width = Math.round(canvasW * DPR); c.height = Math.round(canvasH * DPR);
   }
   // fit the city inside the column, keeping a little room for the shadow's downward offset
   const padX = HALO * 0.15, padTop = HALO * 0.1, padBot = HALO * 0.45;
   mass = Math.min((MAPW - 2 * padX) / (BX1 - BX0), (MAPH - padTop - padBot) / (BY1 - BY0));
-  verX = BLEED + (MAPW - (BX1 - BX0) * mass) / 2 - BX0 * mass;
-  verY = BLEED + padTop + (MAPH - padTop - padBot - (BY1 - BY0) * mass) / 2 - BY0 * mass;
+  offX = BLEED + (MAPW - (BX1 - BX0) * mass) / 2 - BX0 * mass + MAP_SHIFT_X;
+  // keep the bottom-right corner free for the scale bar: slide the city left just enough,
+  // and only shrink it if sliding is not enough
+  const room = Math.max(scaleBarLen(mass) + SCALE_GAP + creditWidth(), cornerWidth()) + CORNER_PAD * 2;
+  if (MAPW - (BX1 - BX0) * mass < 2 * room) {
+    const maxW = MAPW - room - padX;
+    if ((BX1 - BX0) * mass > maxW) mass = maxW / (BX1 - BX0);
+    offX = Math.min(BLEED + (MAPW - (BX1 - BX0) * mass) / 2, BLEED + MAPW - room - (BX1 - BX0) * mass) - BX0 * mass + MAP_SHIFT_X;
+    offY = BLEED + padTop + (MAPH - padTop - padBot - (BY1 - BY0) * mass) / 2 - BY0 * mass;
+  }
+  offY = BLEED + padTop + (MAPH - padTop - padBot - (BY1 - BY0) * mass) / 2 - BY0 * mass;
+  // MAP_SHIFT_X never pushes the city past the left edge of its column (under the panel)
+  offX = Math.max(offX, BLEED + padX - BX0 * mass);
   lastSub = undefined;
   setupRaster();
   dirty = true;
 }
 
 /* ======================= the relief raster =======================
-   Upsampled field, banded color, hillshade from the upper left at 40 degrees
+   Upsampled field, banded colour, hillshade from the upper left at 40 degrees
    and cast shadows from a low 16 degree sun, the way the reference map does it. */
 let RU = 2, RW = 0, RH = 0, rc = null, rctx = null, rimg = null, RV = null, HT = null, SH = null, LIT = null;
 const SUN = 40, LOWSUN = 30, STRENGTH = 1.2, BRIGHTEN = 0.55, DARKEN = 0.60, LIGHTMAX = 0.55, CASTDARK = 0.32;
-const RASTER_MAX_PX = 600000;     // pixels in the relief image; lower = faster, higher = crisper
+const RASTER_MAX_PX = 380000;     // pixels in the relief image; lower = faster, higher = crisper
 function setupRaster() {
   RU = Math.max(2, Math.min(6, Math.round(0.9 * mass), Math.floor(Math.sqrt(RASTER_MAX_PX / (W * H)))));
   RW = W * RU; RH = H * RU;
@@ -430,11 +522,11 @@ function renderRaster() {
   }
   // full height in raster pixels; scaled so the hills read the same at any size
   const OVER = 30 * (RU / mass) * (mass / 1.65);
-  const ABFALL = Math.SQRT2 * Math.tan(Math.PI * LOWSUN / 180) / OVER;
+  const FALLOFF = Math.SQRT2 * Math.tan(Math.PI * LOWSUN / 180) / OVER;
   for (let k = 0; k < RW + RH - 1; k++) {
     let x = k < RW ? k : 0, y = k < RW ? 0 : k - RW + 1, s = -1;
     while (x < RW && y < RH) {
-      const i = y * RW + x; s -= ABFALL;
+      const i = y * RW + x; s -= FALLOFF;
       if (RV[i] >= s) { s = RV[i]; SH[i] = 0; } else SH[i] = s - RV[i];
       x++; y++;
     }
@@ -474,7 +566,7 @@ function renderRaster() {
    One line on every band edge. Facing the light it is white, facing away it is
    dark, so each terrace looks embossed. Higher bands get heavier lines. */
 const LINE = 0.72, DARKLINE = 0.85;
-function contours(zc, toScreen, strich, alphaScale) {
+function contours(zc, toScreen, lineScale, alphaScale) {
   const lit = [], dark = [];
   for (let k = 1; k < NB; k++) { lit.push(new Path2D()); dark.push(new Path2D()); }
   const pts = new Float64Array(8);
@@ -496,15 +588,15 @@ function contours(zc, toScreen, strich, alphaScale) {
       if (n < 4) continue;
       const P = (facing ? lit : dark)[k - 1];
       for (let q = 0; q + 3 < n; q += 4) {
-        P.moveTo(pts[q] * mass + verX, pts[q + 1] * mass + verY);
-        P.lineTo(pts[q + 2] * mass + verX, pts[q + 3] * mass + verY);
+        P.moveTo(pts[q] * mass + offX, pts[q + 1] * mass + offY);
+        P.lineTo(pts[q + 2] * mass + offX, pts[q + 3] * mass + offY);
       }
     }
   }
   zc.lineCap = 'round'; zc.lineJoin = 'round';
   for (let k = 1; k < NB; k++) {
     const st = (k + 0.5) / NB;
-    zc.lineWidth = (0.40 + 0.95 * st) * strich;
+    zc.lineWidth = (0.40 + 0.95 * st) * lineScale;
     zc.strokeStyle = '#fff'; zc.globalAlpha = Math.min(1, LINE * st * alphaScale + 0.08); zc.stroke(lit[k - 1]);
     zc.strokeStyle = '#000'; zc.globalAlpha = Math.min(1, LINE * st * DARKLINE * alphaScale + 0.08); zc.stroke(dark[k - 1]);
   }
@@ -517,7 +609,7 @@ function contours(zc, toScreen, strich, alphaScale) {
    disappear) and then every corner is rounded with a curve of a fixed size, so long
    straight edges stay straight. BOUNDARY_SIMPLIFY and BOUNDARY_ROUND are in grid cells
    (100 m); set BOUNDARY_ROUND to 0 for the original sharp corners. */
-const BOUNDARY_SIMPLIFY = 0.6, BOUNDARY_ROUND = 3;
+const BOUNDARY_SIMPLIFY = 0.6, BOUNDARY_ROUND = 1.2;
 const SMOOTH_RINGS = (() => {
   const dp = (pts, tol) => {
     if (pts.length < 3) return pts;
@@ -577,7 +669,7 @@ let dirty = true, NAMES = true;
 let baseLayer = null, ovLayer = null, topLayer = null, SIL = null, staticKey = '';
 function layer() { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); return [c, g]; }
 function buildStatic() {
-  const map = (x, y) => [x * mass + verX, y * mass + verY];
+  const map = (x, y) => [x * mass + offX, y * mass + offY];
   SIL = outlinePath(map);
   let g;
   // shadow under the city
@@ -590,7 +682,7 @@ function buildStatic() {
   g.fill(SIL, 'evenodd'); g.fill(SIL, 'evenodd');
   g.shadowBlur = blur * 0.3 * DPR; g.fill(SIL, 'evenodd');
   g.restore();
-  const depth = Math.max(2.5, breite / 130);
+  const depth = Math.max(2.5, canvasW / 130);
   g.save(); g.translate(0, depth * 1.9); g.filter = `blur(${(depth * 1.2).toFixed(1)}px)`;
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fill(SIL); g.restore();
   g.save(); g.translate(0, depth); g.fillStyle = '#060605'; g.fill(SIL); g.restore();
@@ -601,21 +693,24 @@ function buildStatic() {
   [topLayer, g] = layer();
   if (NAMES) drawNames(g);
   drawScaleBar(g);
-  staticKey = [cv.width, cv.height, mass, verX, verY, NAMES].join(',');
+  drawCredits(g);
+  drawCorner(g);
+  drawNorth(g);
+  staticKey = [cv.width, cv.height, mass, offX, offY, NAMES].join(',');
 }
 function draw() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, cv.width, cv.height);
   if (!rc) return;
-  if (staticKey !== [cv.width, cv.height, mass, verX, verY, NAMES].join(',')) buildStatic();
+  if (staticKey !== [cv.width, cv.height, mass, offX, offY, NAMES].join(',')) buildStatic();
   renderRaster();
   ctx.drawImage(baseLayer, 0, 0);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
   ctx.clip(SIL, 'evenodd');
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(rc, verX, verY, W * mass, H * mass);
-  contours(ctx, null, Math.max(0.7, breite / 760), 1);
+  ctx.drawImage(rc, offX, offY, W * mass, H * mass);
+  contours(ctx, null, Math.max(0.7, canvasW / 760), 1);
   ctx.restore();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(ovLayer, 0, 0);
@@ -710,18 +805,18 @@ function drawNames(ctx) {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const placed = [];
   for (const lb of [...D.labels].sort((a, b) => a.rank - b.rank)) {
-    const ox = lb.x * mass + verX, oy = lb.y * mass + verY;
+    const ox = lb.x * mass + offX, oy = lb.y * mass + offY;
     const size = Math.max(11, Math.min(34, mass * (lb.rank === 1 ? 3.6 : lb.rank === 2 ? 3.0 : 2.6)));
     ctx.font = '600 ' + size.toFixed(1) + 'px system-ui,-apple-system,"Segoe UI",sans-serif';
     const lines = (LABEL_TEXT[lb.name] || lb.name).split(/\||\n/).map(s => s.trim());
     const lh = size * 1.1;                                  // line height
     const w = Math.max(...lines.map(l => ctx.measureText(l).width));
-    const x = Math.max(w / 2 + 2, Math.min(breite - w / 2 - 2, ox));
+    const x = Math.max(w / 2 + 2, Math.min(canvasW - w / 2 - 2, ox));
     const y0 = oy + size * 0.95;                            // first line sits just below the dot
     const box = [x - w / 2 - 4, y0 - size / 2 - 3, x + w / 2 + 4, y0 + (lines.length - 1) * lh + size / 2 + 3];
     if (placed.some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue;
     placed.push(box);
-    const dot = Math.max(1.6, Math.min(3.2, breite / 380));
+    const dot = Math.max(1.6, Math.min(3.2, canvasW / 380));
     ctx.beginPath(); ctx.arc(ox, oy, dot + 0.8, 0, 6.2832); ctx.fillStyle = '#0c0c0c'; ctx.fill();
     ctx.beginPath(); ctx.arc(ox, oy, dot, 0, 6.2832); ctx.fillStyle = '#e8291c'; ctx.fill();
     ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, size * 0.22); ctx.strokeStyle = '#0c0c0c';
@@ -731,16 +826,117 @@ function drawNames(ctx) {
   }
 }
 /* scale bar in the bottom-left corner of the map, clear of the city */
+function scaleBarMiles(m) { return m * (1609.344 / (D.cellSizeM || 100)) * 2 > MAPW * 0.25 ? 1 : 2; }
+function scaleBarLen(m) { return m * (1609.344 / (D.cellSizeM || 100)) * scaleBarMiles(m); }
+const SCALE_GAP = 28;   // pixels between the scale bar and the credits beside it
 function drawScaleBar(ctx) {
-  const cellsPerMile = 1609.344 / (D.cellSizeM || 100);
-  const miles = mass * cellsPerMile * 2 > MAPW * 0.25 ? 1 : 2;
-  const len = mass * cellsPerMile * miles, x = BLEED + 22, y = BLEED + MAPH - 22;
-  const fs = Math.max(12, Math.round(MAPH * 0.016));
+  // bottom row, left of the credits; the bar and its label are centred on the credit block
+  const miles = scaleBarMiles(mass), len = scaleBarLen(mass), fs = labelFont();
+  const rowBottom = BLEED + MAPH - CORNER_PAD, rowMid = rowBottom - Math.max(creditHeight(), fs + 8) / 2;
+  const y = rowMid + (fs + 6) / 2;
+  const x = BLEED + MAPW - CORNER_PAD - creditWidth() - SCALE_GAP - len;
   ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x, y); ctx.lineTo(x + len, y); ctx.lineTo(x + len, y - 5); ctx.stroke();
   ctx.font = `500 ${fs}px system-ui,sans-serif`; ctx.fillStyle = 'rgba(255,255,255,.7)';
   ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
   ctx.fillText(`${miles} mi`, x + len / 2, y - 6);
+}
+
+/* ======================= corners: credits, north arrow, locator =======================
+   Bottom right, from the top down: a small locator of Maricopa County with Chandler
+   filled in, the scale bar, then who made the map. Top right: the north symbol. All drawn once, in the same
+   muted grey as the scale bar, so they frame the map without competing with it. */
+const CREDIT_LINES = ['Map by Will Surkan'];
+const SHOW_LOCATOR = true, SHOW_NORTH = true;
+const INK = 'rgba(255,255,255,.7)', INK_SOFT = 'rgba(255,255,255,.45)';
+// Maricopa County (U.S. Census Bureau TIGERweb, generalised), lon/lat
+const COUNTY = [[-111.893,33.205],[-112.083,33.205],[-112.096,33.23],[-112.192,33.265],[-112.203,33.31],[-112.204,32.507],[-113.334,32.505],[-113.334,34.0],[-112.744,34.0],[-112.276,33.882],[-112.235,33.916],[-112.24,33.957],[-112.197,33.974],[-112.183,34.012],[-112.161,34.018],[-112.154,34.041],[-112.165,34.048],[-111.726,34.0],[-111.445,34.001],[-111.433,33.984],[-111.453,33.966],[-111.452,33.921],[-111.405,33.919],[-111.413,33.886],[-111.387,33.862],[-111.392,33.836],[-111.372,33.824],[-111.388,33.805],[-111.387,33.75],[-111.356,33.739],[-111.331,33.688],[-111.224,33.603],[-111.207,33.637],[-111.153,33.678],[-111.04,33.466],[-111.581,33.466],[-111.583,33.205],[-111.893,33.205]];
+// Chandler city limits extent (TIGERweb), used to place the city's own outline in the locator
+const CHANDLER_EXT = [-111.9723, 33.2040, -111.7554, 33.3613];
+const PHOENIX = [-112.0740, 33.4484];
+
+const CORNER_PAD = 24;                       // same margin for every corner item
+const CREDIT_INK = 'rgba(255,255,255,.46)', CREDIT_INK_SOFT = 'rgba(255,255,255,.32)';   // faint but legible
+function labelFont() { return Math.max(11, Math.round(MAPH * 0.0135)); }    // locator and scale bar text
+function creditFont() { return Math.max(9, Math.round(MAPH * 0.0098)); }    // credits: deliberately tiny
+function creditLine() { return creditFont() * 1.3; }
+function creditHeight() { return CREDIT_LINES.length ? CREDIT_LINES.length * creditLine() : 0; }
+let _mc = null;
+function creditWidth() {
+  if (!CREDIT_LINES.length) return 0;
+  _mc = _mc || document.createElement('canvas').getContext('2d');
+  _mc.font = `500 ${creditFont()}px system-ui,sans-serif`;
+  return Math.max(...CREDIT_LINES.map(t => _mc.measureText(t).width));
+}
+function drawCredits(ctx) {
+  if (!CREDIT_LINES.length) return;
+  const fs = creditFont(), lh = creditLine(), x = BLEED + MAPW - CORNER_PAD;
+  const y = BLEED + MAPH - CORNER_PAD - (CREDIT_LINES.length - 1) * lh;
+  ctx.font = `500 ${fs}px system-ui,sans-serif`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  CREDIT_LINES.forEach((t, i) => { ctx.fillStyle = i === 0 ? CREDIT_INK : CREDIT_INK_SOFT; ctx.fillText(t, x, y + i * lh); });
+}
+// true if a rectangle stays clear of the city (with a margin)
+let _hit = null;
+function clearOfCity(x, y, w, h, pad) {
+  _hit = _hit || document.createElement('canvas').getContext('2d');
+  for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) {
+    if (_hit.isPointInPath(SIL, x - pad + (w + 2 * pad) * i / 8, y - pad + (h + 2 * pad) * j / 8, 'evenodd')) return false;
+  }
+  return true;
+}
+function locatorSize() {
+  const k = Math.cos(33.4 * Math.PI / 180);
+  let lx0 = Infinity, lx1 = -Infinity, ly0 = Infinity, ly1 = -Infinity;
+  for (const [lo, la] of COUNTY) { lx0 = Math.min(lx0, lo * k); lx1 = Math.max(lx1, lo * k); ly0 = Math.min(ly0, la); ly1 = Math.max(ly1, la); }
+  const w = Math.round(Math.min(170, Math.max(100, MAPH * 0.15)));
+  return { k, lx0, lx1, ly0, ly1, w, h: (ly1 - ly0) * w / (lx1 - lx0) };
+}
+function cornerWidth() { return SHOW_LOCATOR ? locatorSize().w : 0; }
+function drawNorth(ctx) {
+  // a thin ring open at the top, with the N sitting in the gap
+  if (!SHOW_NORTH) return;
+  const r = Math.round(Math.max(15, Math.min(30, MAPH * 0.026)));
+  const fs = Math.round(r * 0.95), lw = Math.max(1.5, r * 0.09);
+  const cx = BLEED + MAPW - CORNER_PAD - r, cy = BLEED + CORNER_PAD + fs * 0.35 + r;
+  ctx.font = `500 ${fs}px system-ui,sans-serif`;
+  const half = ctx.measureText('N').width / 2 + lw * 2.2;          // half the gap, in pixels
+  const g = Math.asin(Math.min(0.95, half / r));
+  ctx.strokeStyle = INK; ctx.lineWidth = lw; ctx.lineCap = 'butt';
+  ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2 + g, -Math.PI / 2 - g + Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('N', cx, cy - r);
+}
+function drawCorner(ctx) {
+  // bottom row: scale bar and credits side by side; the locator sits above them
+  const fs = labelFont(), L = locatorSize();
+  const right = BLEED + MAPW - CORNER_PAD;
+  const bottom = BLEED + MAPH - CORNER_PAD - Math.max(creditHeight(), labelFont() + 8) - 20;   // a fixed gap above the bottom row
+  let x = right - (SHOW_LOCATOR ? L.w : 0);
+  if (SHOW_LOCATOR) {
+    const capH = fs * 1.4, y = bottom - capH - L.h, sc = L.w / (L.lx1 - L.lx0);
+    const P = (lo, la) => [x + (lo * L.k - L.lx0) * sc, y + (L.ly1 - la) * sc];
+    const c = new Path2D();
+    COUNTY.forEach(([lo, la], i) => { const [X, Y] = P(lo, la); i ? c.lineTo(X, Y) : c.moveTo(X, Y); });
+    c.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fill(c);
+    ctx.strokeStyle = INK_SOFT; ctx.lineWidth = 1; ctx.lineJoin = 'round'; ctx.stroke(c);
+    const [cx0, cy0, cx1, cy1] = CHANDLER_EXT;
+    const ch = new Path2D();
+    for (const ring of D.boundary) {
+      ring.forEach(([gx, gy], i) => {
+        const lo = cx0 + (gx - BX0) / (BX1 - BX0) * (cx1 - cx0), la = cy1 - (gy - BY0) / (BY1 - BY0) * (cy1 - cy0);
+        const [X, Y] = P(lo, la); i ? ch.lineTo(X, Y) : ch.moveTo(X, Y);
+      });
+      ch.closePath();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fill(ch, 'evenodd');
+    const [px, py] = P(PHOENIX[0], PHOENIX[1]);
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(px, py, Math.max(1.8, fs * 0.18), 0, Math.PI * 2); ctx.fill();
+    ctx.font = `500 ${Math.round(fs * 0.9)}px system-ui,sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+    ctx.fillStyle = INK_SOFT; ctx.fillText('Phoenix', px - fs * 0.45, py);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  }
+
 }
 
 /* ======================= panel ======================= */
@@ -777,7 +973,7 @@ function updatePanel() {
         $('chRange').textContent = c.from + '–' + c.to; $('chTitle').textContent = c.title; $('chText').textContent = c.text;
         st.style.opacity = 1;
       }, 200);
-      [...$('chList').children].forEach((li, j) => { li.classList.toggle('active', j === ci); li.classList.toggle('past', j < ci); });
+      [...$('chList').querySelectorAll('li')].forEach((li, j) => { li.classList.toggle('active', j === ci); li.classList.toggle('past', j < ci); });
     }
   }
   $('scrub').value = Math.round(t / (NF - 1) * 1000);
@@ -785,14 +981,14 @@ function updatePanel() {
 }
 function legend() {
   const stops = HYPSO.map((h, i) => `${h} ${(100 * i / NB).toFixed(3)}% ${(100 * (i + 1) / NB).toFixed(3)}%`);
-  $('rampe').style.background = 'linear-gradient(90deg,' + stops.join(',') + ')';
-  const e = $('legStufen'); e.textContent = '';
+  $('colorRamp').style.background = 'linear-gradient(90deg,' + stops.join(',') + ')';
+  const e = $('legTicks'); e.textContent = '';
   const marks = [0, 0.5, 1, 1.5, 2, 2.5, 3].filter(m => m <= WHITE - 0.25);
   marks.push(WHITE);
   for (const m of marks) {
     const s = document.createElement('span');
     s.textContent = m === 0 ? '0' : m === WHITE ? '×' + WHITE.toFixed(1) + '+' : '×' + m;
-    if (m === 1) s.className = 'eins';
+    if (m === 1) s.className = 'oneTick';
     if (m === 0) s.className = 'a';
     s.style.left = (100 * ladder(m)).toFixed(2) + '%';
     e.appendChild(s);
@@ -800,13 +996,8 @@ function legend() {
   $('legText').textContent = `Compared with ${PLACE}’s average in ${D.refYear}` +
     (D.refDensityPerSqMi ? ` (about ${nf.format(D.refDensityPerSqMi)} people per square mile)` : '');
   // OpenStreetMap's licence asks for credit wherever its data is shown
-  const quelle = ((OV.airfield && OV.airfield.src === 'osm') ? 'Airfields © OpenStreetMap contributors. ' : '') + (D.source || '');
-  $('quelle').textContent = quelle; $('quelle').title = quelle;
-  if (D.demo && !$('demo')) {
-    const tag = document.createElement('span'); tag.id = 'demo'; tag.textContent = 'Demo pattern';
-    tag.title = 'The map pattern is simulated. Population totals are real Census figures.';
-    document.querySelector('.eyebrow').appendChild(tag);
-  }
+  const sourceNote = ((OV.airfield && OV.airfield.src === 'osm') ? 'Airfields © OpenStreetMap contributors. ' : '') + (D.source || '');
+  $('sourceNote').textContent = sourceNote; $('sourceNote').title = sourceNote;
 }
 // residents sparkline
 const popMax = Math.max(...POP);
@@ -874,15 +1065,16 @@ function outline(sd) {
   if (!sd) return;
   uctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const p = new Path2D();
-  for (const r of sd.r) { r.forEach(([x, y], k) => { const X = x * mass + verX, Y = y * mass + verY; k ? p.lineTo(X, Y) : p.moveTo(X, Y); }); p.closePath(); }
+  for (const r of sd.r) { r.forEach(([x, y], k) => { const X = x * mass + offX, Y = y * mass + offY; k ? p.lineTo(X, Y) : p.moveTo(X, Y); }); p.closePath(); }
   uctx.lineJoin = 'round';
+  uctx.fillStyle = 'rgba(255,255,255,.16)'; uctx.fill(p, 'evenodd');
   uctx.strokeStyle = 'rgba(12,12,12,.85)'; uctx.lineWidth = 3.5; uctx.stroke(p);
   uctx.strokeStyle = '#fff'; uctx.lineWidth = 1.5; uctx.stroke(p);
 }
 const yrs = sd => sd.y0 === sd.y1 ? String(sd.y0) : sd.y0 + '–' + sd.y1;
 $('mapwrap').addEventListener('pointermove', e => {
   const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
-  const gx = (mx - verX) / mass, gy = (my - verY) / mass, i = gx | 0, j = gy | 0;
+  const gx = (mx - offX) / mass, gy = (my - offY) / mass, i = gx | 0, j = gy | 0;
   const inCity = i >= 0 && j >= 0 && i < W && j < H && INSIDE[j * W + i];
   const sd = SUBS.length ? subAt(gx, gy) : null;
   if (!inCity && !sd) { tip.style.opacity = 0; outline(null); return; }
@@ -904,8 +1096,20 @@ $('mapwrap').addEventListener('pointermove', e => {
   }
   tip.innerHTML = html;
   outline(sd);
-  const tx = mx - BLEED, ty = my - BLEED;
-  tip.style.left = Math.max(0, Math.min(MAPW - 290, tx + 14)) + 'px'; tip.style.top = Math.min(MAPH - 120, ty + 14) + 'px';
+  // place the label beside the subdivision (right, else left, else below), never on top of it
+  const tw = tip.offsetWidth, th = tip.offsetHeight, gap = 14;
+  let lx, ly;
+  if (sd) {
+    const [bx0, by0, bx1, by1] = sd.bb;
+    const L = bx0 * mass + offX - BLEED, R = bx1 * mass + offX - BLEED, T = by0 * mass + offY - BLEED, B = by1 * mass + offY - BLEED;
+    ly = Math.max(0, Math.min(MAPH - th, (T + B) / 2 - th / 2));
+    if (R + gap + tw <= MAPW) lx = R + gap;
+    else if (L - gap - tw >= 0) lx = L - gap - tw;
+    else { lx = Math.max(0, Math.min(MAPW - tw, (L + R) / 2 - tw / 2)); ly = B + gap + th <= MAPH ? B + gap : Math.max(0, T - gap - th); }
+  } else {
+    lx = Math.max(0, Math.min(MAPW - tw, mx - BLEED + 14)); ly = Math.max(0, Math.min(MAPH - th, my - BLEED + 14));
+  }
+  tip.style.left = lx + 'px'; tip.style.top = ly + 'px';
   tip.style.opacity = 1;
 });
 $('mapwrap').addEventListener('pointerleave', () => { tip.style.opacity = 0; outline(null); });
@@ -922,18 +1126,18 @@ function setPlaying(p) {
 $('play').onclick = () => setPlaying(!playing);
 $('scrub').addEventListener('input', e => { setPlaying(false); t = e.target.value / 1000 * (NF - 1); dirty = true; });
 $('speed').addEventListener('change', e => { speed = parseFloat(e.target.value); });
-$('namen').addEventListener('click', e => { NAMES = !NAMES; e.currentTarget.setAttribute('aria-pressed', String(NAMES)); dirty = true; });
+$('namesBtn').addEventListener('click', e => { NAMES = !NAMES; e.currentTarget.setAttribute('aria-pressed', String(NAMES)); dirty = true; });
 $('fullscreen').addEventListener('click', () => {
   document.fullscreenElement ? document.exitFullscreen().catch(() => {}) : document.documentElement.requestFullscreen().catch(() => {});
 });
 function chooseLadder(cvd) {
   setLadder(cvd ? HYPSO_CVD : HYPSO_ATLAS);
-  $('farben').setAttribute('aria-pressed', String(cvd));
+  $('colorsBtn').setAttribute('aria-pressed', String(cvd));
   try { localStorage.setItem('ladder', cvd ? 'cvd' : 'atlas'); } catch (e) {}
   legend(); dirty = true;
 }
-$('farben').addEventListener('click', () => chooseLadder(HYPSO !== HYPSO_CVD));
-try { if (localStorage.getItem('ladder') === 'cvd') { setLadder(HYPSO_CVD); $('farben').setAttribute('aria-pressed', 'true'); } } catch (e) {}
+$('colorsBtn').addEventListener('click', () => chooseLadder(HYPSO !== HYPSO_CVD));
+try { if (localStorage.getItem('ladder') === 'cvd') { setLadder(HYPSO_CVD); $('colorsBtn').setAttribute('aria-pressed', 'true'); } } catch (e) {}
 
 addEventListener('keydown', e => {
   if (e.target.tagName === 'SELECT') return;
@@ -957,12 +1161,21 @@ if (location.hash === '#kiosk') document.body.classList.add('kiosk');
 
 /* ======================= loop ======================= */
 let lastT = -1;
+let loopFade = -1;                 // -1 = not fading; 0..1 = progress of the loop-restart fade
 function frame(ts) {
   const dt = lastTs ? Math.min(0.1, (ts - lastTs) / 1000) : 0; lastTs = ts;
+  if (loopFade >= 0 && (!playing || t < NF - 1 - 1e-6)) { loopFade = -1; dirty = true; }   // paused or moved by hand: stop the fade
   if (playing) {
-    if (hold > 0) {
+    if (loopFade >= 0) {
+      // the end of the loop: the final year melts into 1970, then the story starts again
+      loopFade = Math.min(1, loopFade + dt * speed / LOOP_FADE);
+      const w = loopFade * loopFade * (3 - 2 * loopFade);
+      fieldBlend(w); draw();
+      if (loopFade >= 1) { loopFade = -1; t = 0; hold = 1.0; dirty = true; }
+      requestAnimationFrame(frame); return;
+    } else if (hold > 0) {
       hold -= dt;
-      if (hold <= 0 && t >= NF - 1 - 1e-6) { t = 0; hold = 1.0; dirty = true; }
+      if (hold <= 0 && t >= NF - 1 - 1e-6) { loopFade = 0; }
     } else {
       t += dt * speed / SEC_PER_YEAR;
       if (t >= NF - 1) { t = NF - 1; hold = END_HOLD; }
@@ -972,17 +1185,17 @@ function frame(ts) {
   if (dirty || t !== lastT) { fieldAt(t); draw(); updatePanel(); lastT = t; dirty = false; }
   requestAnimationFrame(frame);
 }
-function relayout() { fitColumns(); masse(); drawSpark(); }
+function relayout() { fitColumns(); fitMap(); drawSpark(); }
 if (window.ResizeObserver) {
   let lw = 0, lh = 0;
   new ResizeObserver(() => {
     const f = cv.parentElement;
     if (f.clientWidth === lw && f.clientHeight === lh) return;
-    lw = f.clientWidth; lh = f.clientHeight; masse();
+    lw = f.clientWidth; lh = f.clientHeight; fitMap();
   }).observe(cv.parentElement);
 }
 addEventListener('resize', relayout);
-fitColumns(); masse(); legend(); setPlaying(playing);
+fitColumns(); fitMap(); legend(); setPlaying(playing);
 requestAnimationFrame(frame);
 })();
 </script>
