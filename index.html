@@ -43,28 +43,34 @@ body{background:var(--plane);color:var(--ink);
   border:1px solid var(--axis);color:var(--ink2)}
 #popKind.census{color:var(--ink);border-color:var(--muted)}
 
-#story{display:flex;flex-direction:column;gap:calc(.7*var(--u));max-width:36em;transition:opacity .4s}
+#story{display:flex;flex-direction:column;gap:calc(.7*var(--u));max-width:36em;transition:opacity .6s ease-in-out}
 #chRange{align-self:flex-start;font-size:clamp(12px,calc(1.75*var(--u)),22px);line-height:1;color:#d4dab2;font-variant-numeric:tabular-nums;
-  animation:glyphGlow 3.0s ease-in-out infinite}
+  animation:glyphGlow 2.0s ease-in-out infinite}
 /* the current decade glows softly around each letter: a tight inner glow plus a wide faint one */
 :root{--glow-in:rgba(220,228,176,.62);--glow-out:rgba(180,190,135,.30)}
+/* The glow strength lives in two animatable colours (--gi, --go). Every decade row breathes on
+   the same clock; only these colours fade between rows, so the glow hands over seamlessly. */
+@property --gi{syntax:'<color>';inherits:true;initial-value:rgba(220,228,176,0)}
+@property --go{syntax:'<color>';inherits:true;initial-value:rgba(180,190,135,0)}
+#chRange{--gi:var(--glow-in);--go:var(--glow-out)}
 @keyframes glyphGlow{
-  0%,100%{text-shadow:0 0 4px var(--glow-in),0 0 12px var(--glow-out)}
-  50%{text-shadow:0 0 6px var(--glow-in),0 0 20px var(--glow-out)}}
+  0%,100%{text-shadow:0 0 4px var(--gi),0 0 12px var(--go)}
+  50%{text-shadow:0 0 6px var(--gi),0 0 20px var(--go)}}
 #chTitle{margin:0;font-weight:650;font-size:clamp(18px,calc(3.2*var(--u)),44px);line-height:1.15;text-wrap:balance}
 #chText{margin:0;color:var(--ink2);font-size:clamp(13px,calc(1.95*var(--u)),26px);line-height:1.45}
 
 #chList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;position:relative}
 #chList li{position:relative;z-index:1}
 /* marker that glides down the list as the years pass from one decade into the next */
-#chList .range{transition:color .8s ease,text-shadow .8s ease}
-#chList button{all:unset;cursor:pointer;display:grid;grid-template-columns:6.5em 1fr;gap:10px;
+#chList .range{--gi:rgba(220,228,176,0);--go:rgba(180,190,135,0);animation:glyphGlow 4.5s ease-in-out infinite;
+  transition:color 1.0s ease-in-out,--gi 1.0s ease-in-out,--go 1.0s ease-in-out}
+#chList button{all:unset;transition:color 1.0s ease-in-out;cursor:pointer;display:grid;grid-template-columns:6.5em 1fr;gap:10px;
   padding:calc(.25*var(--u)) 0;font-weight:600;font-size:clamp(12px,calc(1.7*var(--u)),22px);line-height:1.3;
   color:var(--muted);border-radius:2px}
 #chList .range{font-weight:400;font-variant-numeric:tabular-nums}
 #chList li.past button{color:var(--ink2)}
 #chList li.active button{color:var(--ink)}
-#chList li.active .range{color:#d4dab2;animation:glyphGlow 4.5s ease-in-out infinite}
+#chList li.active .range{color:#d4dab2;--gi:var(--glow-in);--go:var(--glow-out)}
 #chList button:hover{color:var(--ink)}
 #chList button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -196,7 +202,7 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
   #chList,.keys{display:none}
 }
 @media (max-width:520px){#controls{flex-wrap:wrap}.track{order:-1;flex-basis:100%}}
-@media (prefers-reduced-motion:reduce){#chRange,#chList li.active .range{animation:none;text-shadow:0 0 4px var(--glow-in),0 0 12px var(--glow-out)}#story,#controls{transition:none}}
+@media (prefers-reduced-motion:reduce){#chRange,#chList .range{animation:none;text-shadow:0 0 4px var(--gi),0 0 12px var(--go)}#story,#controls{transition:none}}
 </style>
 </head><body>
 <div id="app">
@@ -257,9 +263,9 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
 // 'auto' sets it so that WHITE_SHARE of the city is white in the final year.
 const WHITE_AT = 3.0;         // a number (no quotes) fixes it; 'auto' sets it from the data
 const WHITE_SHARE = 0.05;
-const SEC_PER_YEAR = 0.8;        // playback speed
-const END_HOLD = 4.5;              // seconds the last year stays before the loop restarts
-const LOOP_FADE = 2.5;             // seconds the last year takes to melt back into 1970 when the loop restarts
+const SEC_PER_YEAR = 1.0;        // playback speed
+const END_HOLD = 2.0;              // seconds the last year stays before the loop restarts
+const LOOP_FADE = 3.5;             // seconds the last year takes to melt back into 1970 when the loop restarts
 
 /* ======================= data ======================= */
 function loadData() {
@@ -488,7 +494,7 @@ function fitMap() {
    and cast shadows from a low 16 degree sun, the way the reference map does it. */
 let RU = 2, RW = 0, RH = 0, rc = null, rctx = null, rimg = null, RV = null, HT = null, SH = null, LIT = null;
 const SUN = 40, LOWSUN = 30, STRENGTH = 1.2, BRIGHTEN = 0.55, DARKEN = 0.60, LIGHTMAX = 0.55, CASTDARK = 0.32;
-const RASTER_MAX_PX = 380000;     // pixels in the relief image; lower = faster, higher = crisper
+const RASTER_MAX_PX = 1000000;     // pixels in the relief image; lower = faster, higher = crisper
 function setupRaster() {
   RU = Math.max(2, Math.min(6, Math.round(0.9 * mass), Math.floor(Math.sqrt(RASTER_MAX_PX / (W * H)))));
   RW = W * RU; RH = H * RU;
@@ -828,13 +834,22 @@ function drawNames(ctx) {
 /* scale bar in the bottom-left corner of the map, clear of the city */
 function scaleBarMiles(m) { return m * (1609.344 / (D.cellSizeM || 100)) * 2 > MAPW * 0.25 ? 1 : 2; }
 function scaleBarLen(m) { return m * (1609.344 / (D.cellSizeM || 100)) * scaleBarMiles(m); }
-const SCALE_GAP = 28;   // pixels between the scale bar and the credits beside it
+const SCALE_GAP = 78;   // pixels between the scale bar and the credits beside it (narrow screens)
+const SCALE_POS = 0.33; // where the scale bar sits in the open space between the city and the locator: 0 = by the city, 1 = by the locator
 function drawScaleBar(ctx) {
-  // bottom row, left of the credits; the bar and its label are centred on the credit block
+  // bottom row, in the open space between the city's edge and the locator; same height as before
   const miles = scaleBarMiles(mass), len = scaleBarLen(mass), fs = labelFont();
   const rowBottom = BLEED + MAPH - CORNER_PAD, rowMid = rowBottom - Math.max(creditHeight(), fs + 8) / 2;
   const y = rowMid + (fs + 6) / 2;
-  const x = BLEED + MAPW - CORNER_PAD - creditWidth() - SCALE_GAP - len;
+  const cityRight = offX + BX1 * mass + 24;                                         // keep clear of the city and its shadow
+  const locLeft = BLEED + MAPW - CORNER_PAD - (SHOW_LOCATOR ? locatorSize().w : creditWidth()) - 24;
+  let x = cityRight + SCALE_POS * (locLeft - cityRight) - len / 2;
+  x = Math.max(cityRight, Math.min(locLeft - len, x));
+  if (locLeft - cityRight < len) {
+    // narrow screens: no room beside the city, so sit just left of the credit text instead
+    const creditLeft = (SHOW_LOCATOR ? BLEED + MAPW - CORNER_PAD - locatorSize().w / 2 - creditWidth() / 2 : BLEED + MAPW - CORNER_PAD - creditWidth());
+    x = creditLeft - SCALE_GAP - len;
+  }
   ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x, y); ctx.lineTo(x + len, y); ctx.lineTo(x + len, y - 5); ctx.stroke();
   ctx.font = `500 ${fs}px system-ui,sans-serif`; ctx.fillStyle = 'rgba(255,255,255,.7)';
@@ -858,7 +873,7 @@ const PHOENIX = [-112.0740, 33.4484];
 const CORNER_PAD = 24;                       // same margin for every corner item
 const CREDIT_INK = 'rgba(255,255,255,.46)', CREDIT_INK_SOFT = 'rgba(255,255,255,.32)';   // faint but legible
 function labelFont() { return Math.max(11, Math.round(MAPH * 0.0135)); }    // locator and scale bar text
-function creditFont() { return Math.max(9, Math.round(MAPH * 0.0098)); }    // credits: deliberately tiny
+function creditFont() { return Math.max(8, Math.round(MAPH * 0.0098)); }    // credits: deliberately tiny
 function creditLine() { return creditFont() * 1.3; }
 function creditHeight() { return CREDIT_LINES.length ? CREDIT_LINES.length * creditLine() : 0; }
 let _mc = null;
@@ -870,9 +885,11 @@ function creditWidth() {
 }
 function drawCredits(ctx) {
   if (!CREDIT_LINES.length) return;
-  const fs = creditFont(), lh = creditLine(), x = BLEED + MAPW - CORNER_PAD;
+  // centred under the locator (right-aligned in the corner if the locator is off)
+  const fs = creditFont(), lh = creditLine();
+  const x = SHOW_LOCATOR ? BLEED + MAPW - CORNER_PAD - locatorSize().w / 2 : BLEED + MAPW - CORNER_PAD;
   const y = BLEED + MAPH - CORNER_PAD - (CREDIT_LINES.length - 1) * lh;
-  ctx.font = `500 ${fs}px system-ui,sans-serif`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.font = `500 ${fs}px system-ui,sans-serif`; ctx.textAlign = SHOW_LOCATOR ? 'center' : 'right'; ctx.textBaseline = 'bottom';
   CREDIT_LINES.forEach((t, i) => { ctx.fillStyle = i === 0 ? CREDIT_INK : CREDIT_INK_SOFT; ctx.fillText(t, x, y + i * lh); });
 }
 // true if a rectangle stays clear of the city (with a margin)
@@ -913,7 +930,7 @@ function drawCorner(ctx) {
   const bottom = BLEED + MAPH - CORNER_PAD - Math.max(creditHeight(), labelFont() + 8) - 20;   // a fixed gap above the bottom row
   let x = right - (SHOW_LOCATOR ? L.w : 0);
   if (SHOW_LOCATOR) {
-    const capH = fs * 1.4, y = bottom - capH - L.h, sc = L.w / (L.lx1 - L.lx0);
+    const capH = 4, y = bottom - capH - L.h, sc = L.w / (L.lx1 - L.lx0);
     const P = (lo, la) => [x + (lo * L.k - L.lx0) * sc, y + (L.ly1 - la) * sc];
     const c = new Path2D();
     COUNTY.forEach(([lo, la], i) => { const [X, Y] = P(lo, la); i ? c.lineTo(X, Y) : c.moveTo(X, Y); });
@@ -934,7 +951,12 @@ function drawCorner(ctx) {
     ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(px, py, Math.max(1.8, fs * 0.18), 0, Math.PI * 2); ctx.fill();
     ctx.font = `500 ${Math.round(fs * 0.9)}px system-ui,sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
     ctx.fillStyle = INK_SOFT; ctx.fillText('Phoenix', px - fs * 0.45, py);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    // caption above the county
+    ctx.font = `500 ${creditFont()}px system-ui,sans-serif`; ctx.fillStyle = CREDIT_INK_SOFT;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    const capY = y - 5;                                        // 5 px above the top of the county outline
+    ctx.fillText('County',   x + L.w / 2, capY);               // bottom line
+    ctx.fillText('Maricopa', x + L.w / 2, capY - creditLine()); // line above it
   }
 
 }
@@ -972,7 +994,7 @@ function updatePanel() {
       setTimeout(() => {
         $('chRange').textContent = c.from + '–' + c.to; $('chTitle').textContent = c.title; $('chText').textContent = c.text;
         st.style.opacity = 1;
-      }, 200);
+      }, 600);
       [...$('chList').querySelectorAll('li')].forEach((li, j) => { li.classList.toggle('active', j === ci); li.classList.toggle('past', j < ci); });
     }
   }
