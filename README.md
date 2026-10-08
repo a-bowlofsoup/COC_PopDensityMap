@@ -1,3 +1,6 @@
+<img width="1280" height="720" alt="COC_Pop_Den" src="https://github.com/user-attachments/assets/038d93a4-1022-4b10-87e0-e24e5fd46807" />
+
+
 # Chandler, Drawn by Its People
 
 **An animated relief map of where people live in Chandler, Arizona, from 1970 to 2026.**
