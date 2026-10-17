@@ -34,7 +34,16 @@ body{background:var(--plane);color:var(--ink);
   text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .headline{display:flex;align-items:baseline;gap:.35em;flex-wrap:wrap}
 #year{font-weight:650;font-size:clamp(56px,calc(14.5*var(--u)),200px);line-height:.85;letter-spacing:-.03em;
-  font-variant-numeric:tabular-nums}
+  font-variant-numeric:tabular-nums;display:flex}
+/* the year is four rolling digit wheels, like an odometer or a mechanical clock counter */
+#year .wheel{display:inline-block;height:.85em;overflow:hidden;position:relative}
+#year .strip{display:flex;flex-direction:column;will-change:transform}
+#year .strip span{height:.85em;line-height:.85em;text-align:center}
+#year.rewinding .strip{filter:blur(.6px)}                  /* a hint of motion blur while it spins back */
+body.rewind #chList .range,body.rewind #chList button{transition-duration:.3s}
+body.rewind #chTitle,body.rewind #chText{opacity:.18;transition:opacity .5s}
+#chRange.tick{animation:tick .22s ease-out}
+@keyframes tick{0%{transform:translateY(-.35em);opacity:.2}100%{transform:none;opacity:1}}
 .popblock{display:flex;flex-direction:column;gap:4px}
 #pop{font-weight:650;font-size:clamp(20px,calc(4.2*var(--u)),60px);line-height:1;letter-spacing:-.01em;
   font-variant-numeric:tabular-nums}
@@ -202,7 +211,7 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
   #chList,.keys{display:none}
 }
 @media (max-width:520px){#controls{flex-wrap:wrap}.track{order:-1;flex-basis:100%}}
-@media (prefers-reduced-motion:reduce){#chRange,#chList .range{animation:none;text-shadow:0 0 4px var(--gi),0 0 12px var(--go)}#story,#controls{transition:none}}
+@media (prefers-reduced-motion:reduce){#year.rewinding .strip{filter:none}#chRange,#chList .range{animation:none;text-shadow:0 0 4px var(--gi),0 0 12px var(--go)}#story,#controls{transition:none}}
 </style>
 </head><body>
 <div id="app">
@@ -977,11 +986,59 @@ chapters.forEach(c => {
 });
 const chapterFor = y => { let k = -1; chapters.forEach((c, i) => { if (y >= c.from) k = i; }); return k; };
 let shownYear = null, shownChapter = -2;
+/* Year counter built from digit wheels. setYear(v) takes a fractional year: whole years sit still,
+   in-between values roll the wheels like an odometer (a wheel only turns while the one to its
+   right passes from 9 to 0). */
+const yearEl = $('year'), WHEELS = [];
+(function buildWheels() {
+  yearEl.textContent = '';
+  for (let k = 0; k < 4; k++) {
+    const w = document.createElement('span'); w.className = 'wheel'; w.setAttribute('aria-hidden', 'true');
+    const st = document.createElement('span'); st.className = 'strip';
+    for (let d = 0; d <= 10; d++) { const c = document.createElement('span'); c.textContent = d % 10; st.appendChild(c); }
+    w.appendChild(st); yearEl.appendChild(w); WHEELS.unshift(st);      // WHEELS[0] = ones
+  }
+})();
+function setYear(v) {
+  yearEl.setAttribute('aria-label', String(Math.round(v)));
+  for (let k = 0; k < 4; k++) {
+    const p = Math.pow(10, k), below = v % p;
+    let pos = Math.floor(v / p) % 10;
+    if (k === 0) pos += v % 1;                                   // ones wheel turns continuously
+    else if (below > p - 1) pos += below - (p - 1);              // others turn as the wheel below rolls over
+    WHEELS[k].style.transform = `translateY(${(-pos * 0.85).toFixed(4)}em)`;
+  }
+}
+/* Rewind at the end of the loop: the year spins back from 2026 to 1970 while the map melts,
+   the decade list steps back up through each decade and the population counts down. */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let rewindChapter = -1;
+function rewindPanel(w) {
+  if (REDUCED) return;
+  if (!document.body.classList.contains('rewind')) { document.body.classList.add('rewind'); yearEl.classList.add('rewinding'); rewindChapter = -1; }
+  const v = Y1 - (Y1 - Y0) * w, yd = Math.round(v);
+  setYear(v);
+  if (w >= 0.98) yearEl.classList.remove('rewinding');          // settle sharp on 1970
+  const ki = Math.max(0, Math.min(NF - 1, YEARS.indexOf(yd)));
+  $('pop').textContent = '≈ ' + nf.format(Math.round(POP[ki] / 100) * 100);
+  const ci = chapterFor(yd);
+  if (ci !== rewindChapter && chapters[ci]) {
+    rewindChapter = ci;
+    const c = chapters[ci], r = $('chRange');
+    r.textContent = c.from + '–' + c.to;
+    r.classList.remove('tick'); void r.offsetWidth; r.classList.add('tick');
+    [...$('chList').querySelectorAll('li')].forEach((li, j) => { li.classList.toggle('active', j === ci); li.classList.toggle('past', j < ci); });
+  }
+}
+function endRewind() {
+  document.body.classList.remove('rewind'); yearEl.classList.remove('rewinding');
+  shownYear = null; shownChapter = -2;                           // the next panel update redraws everything
+}
 function updatePanel() {
   const k = Math.min(NF - 1, Math.floor(t + 1e-6)), y = YEARS[k];
   if (y !== shownYear) {
     shownYear = y;
-    $('year').textContent = y;
+    setYear(y);
     const exact = CENSUS.has(y);
     $('pop').textContent = (exact ? '' : '≈ ') + nf.format(exact ? POP[k] : Math.round(POP[k] / 100) * 100);
     $('popKind').textContent = exact ? y + ' Census' : 'estimate';
@@ -1186,14 +1243,14 @@ let lastT = -1;
 let loopFade = -1;                 // -1 = not fading; 0..1 = progress of the loop-restart fade
 function frame(ts) {
   const dt = lastTs ? Math.min(0.1, (ts - lastTs) / 1000) : 0; lastTs = ts;
-  if (loopFade >= 0 && (!playing || t < NF - 1 - 1e-6)) { loopFade = -1; dirty = true; }   // paused or moved by hand: stop the fade
+  if (loopFade >= 0 && (!playing || t < NF - 1 - 1e-6)) { loopFade = -1; endRewind(); dirty = true; }   // paused or moved by hand: stop the fade
   if (playing) {
     if (loopFade >= 0) {
       // the end of the loop: the final year melts into 1970, then the story starts again
       loopFade = Math.min(1, loopFade + dt * speed / LOOP_FADE);
       const w = loopFade * loopFade * (3 - 2 * loopFade);
-      fieldBlend(w); draw();
-      if (loopFade >= 1) { loopFade = -1; t = 0; hold = 1.0; dirty = true; }
+      fieldBlend(w); draw(); rewindPanel(w);
+      if (loopFade >= 1) { loopFade = -1; t = 0; hold = 1.0; dirty = true; endRewind(); }
       requestAnimationFrame(frame); return;
     } else if (hold > 0) {
       hold -= dt;
