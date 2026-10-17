@@ -211,7 +211,6 @@ body.kiosk #app{padding-bottom:clamp(10px,1.6vh,28px)}
   #chList,.keys{display:none}
 }
 @media (max-width:520px){#controls{flex-wrap:wrap}.track{order:-1;flex-basis:100%}}
-@media (prefers-reduced-motion:reduce){#year.rewinding .strip{filter:none}#chRange,#chList .range{animation:none;text-shadow:0 0 4px var(--gi),0 0 12px var(--go)}#story,#controls{transition:none}}
 </style>
 </head><body>
 <div id="app">
@@ -412,7 +411,7 @@ const band = f => f <= 0 ? 0 : f >= 1 ? NB - 1 : Math.min(NB - 1, Math.floor(f *
 
 /* ======================= time ======================= */
 let t = 0;                       // position in frames, fractional
-let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+let playing = true;               // always starts playing
 let hold = 1.0, lastTs = 0;
 const yearAt = tt => Y0 + (Y1 - Y0) * tt / (NF - 1);
 
@@ -1011,10 +1010,8 @@ function setYear(v) {
 }
 /* Rewind at the end of the loop: the year spins back from 2026 to 1970 while the map melts,
    the decade list steps back up through each decade and the population counts down. */
-const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let rewindChapter = -1;
 function rewindPanel(w) {
-  if (REDUCED) return;
   if (!document.body.classList.contains('rewind')) { document.body.classList.add('rewind'); yearEl.classList.add('rewinding'); rewindChapter = -1; }
   const v = Y1 - (Y1 - Y0) * w, yd = Math.round(v);
   setYear(v);
@@ -1030,8 +1027,10 @@ function rewindPanel(w) {
     [...$('chList').querySelectorAll('li')].forEach((li, j) => { li.classList.toggle('active', j === ci); li.classList.toggle('past', j < ci); });
   }
 }
+// the tick is a one-off; afterwards the heading goes back to its breathing glow
+$('chRange').addEventListener('animationend', e => { if (e.animationName === 'tick') e.currentTarget.classList.remove('tick'); });
 function endRewind() {
-  document.body.classList.remove('rewind'); yearEl.classList.remove('rewinding');
+  document.body.classList.remove('rewind'); yearEl.classList.remove('rewinding'); $('chRange').classList.remove('tick');
   shownYear = null; shownChapter = -2;                           // the next panel update redraws everything
 }
 function updatePanel() {
