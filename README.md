@@ -1,4 +1,4 @@
-<img width="640" height="360" alt="COC_Pop_Den" src="https://github.com/user-attachments/assets/038d93a4-1022-4b10-87e0-e24e5fd46807" />
+<img width="960" height="540" alt="COC_Pop_Den" src="https://github.com/user-attachments/assets/038d93a4-1022-4b10-87e0-e24e5fd46807" />
 
 
 # Chandler, Drawn by Its People
